@@ -139,9 +139,16 @@ Default credentials:
 
 ### Raspberry Pi Client Installation
 
-**One-line install from your server:**
+**One-line install from GitHub:**
 ```bash
-curl -sL http://YOUR-SERVER:5000/static/client/install.sh | bash
+curl -sL https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/raspberry_client/install.sh | bash
+```
+
+**Or download and run:**
+```bash
+wget https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/raspberry_client/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 See [RASPBERRY_PI_QUICKSTART.md](RASPBERRY_PI_QUICKSTART.md) for detailed instructions.

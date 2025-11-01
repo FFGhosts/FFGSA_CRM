@@ -17,6 +17,8 @@ NC='\033[0m' # No Color
 INSTALL_DIR="/home/pi/picms"
 SERVICE_NAME="picms-player"
 PYTHON_VERSION="3"
+GITHUB_REPO="https://github.com/FFGhosts/FFGSA_CRM.git"
+GITHUB_RAW="https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/raspberry_client"
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════╗"
@@ -104,35 +106,29 @@ mkdir -p $INSTALL_DIR/logs
 
 echo -e "${GREEN}✓ Directory structure created${NC}"
 
-echo -e "\n${GREEN}Step 5: Downloading Player Software${NC}"
+echo -e "\n${GREEN}Step 5: Downloading Player Software from GitHub${NC}"
 echo "=================================================="
 
-# Download player.py from server or use local copy
+# Download player files from GitHub
 echo "Downloading player.py..."
-if curl -f -s -o $INSTALL_DIR/player.py "$SERVER_URL/static/client/player.py" 2>/dev/null; then
-    echo -e "${GREEN}✓ Downloaded from server${NC}"
+if curl -f -s -L -o $INSTALL_DIR/player.py "$GITHUB_RAW/player.py"; then
+    echo -e "${GREEN}✓ Downloaded player.py${NC}"
+    chmod +x $INSTALL_DIR/player.py
 else
-    echo -e "${YELLOW}Warning: Could not download from server${NC}"
-    echo "Please ensure player.py is in $INSTALL_DIR/"
-    
-    # Create a basic player.py if not exists
-    if [ ! -f "$INSTALL_DIR/player.py" ]; then
-        cat > $INSTALL_DIR/player.py << 'PLAYER_EOF'
-#!/usr/bin/env python3
-"""
-PiCMS Video Player Client for Raspberry Pi
-This is a placeholder - replace with the actual player.py from the repository
-"""
-import sys
-print("PiCMS Player - Please replace this file with the actual player.py")
-sys.exit(1)
-PLAYER_EOF
-        chmod +x $INSTALL_DIR/player.py
-        echo -e "${YELLOW}Created placeholder player.py - needs to be replaced${NC}"
-    fi
+    echo -e "${RED}Error: Could not download player.py from GitHub${NC}"
+    echo "Please check your internet connection and try again"
+    exit 1
 fi
 
-chmod +x $INSTALL_DIR/player.py
+echo "Downloading install_service.sh..."
+if curl -f -s -L -o $INSTALL_DIR/install_service.sh "$GITHUB_RAW/install_service.sh"; then
+    echo -e "${GREEN}✓ Downloaded install_service.sh${NC}"
+    chmod +x $INSTALL_DIR/install_service.sh
+else
+    echo -e "${YELLOW}⚠ Could not download install_service.sh${NC}"
+fi
+
+echo -e "${GREEN}✓ Player software downloaded from GitHub${NC}"
 
 echo -e "\n${GREEN}Step 6: Creating Configuration${NC}"
 echo "=================================================="

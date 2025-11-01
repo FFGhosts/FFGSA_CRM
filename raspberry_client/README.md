@@ -7,7 +7,15 @@ This directory contains the client software that runs on Raspberry Pi devices to
 The easiest way to install PiCMS player on your Raspberry Pi:
 
 ```bash
-curl -sL http://YOUR-SERVER:5000/static/client/install.sh | bash
+curl -sL https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/raspberry_client/install.sh | bash
+```
+
+**Or download and run:**
+
+```bash
+wget https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/raspberry_client/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 That's it! The installer will:
