@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}{{ playlist.name }} - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('playlist.index') }}">Playlists</a></li>
+                <li class="breadcrumb-item active">{{ playlist.name }}</li>
+            </ol>
+        </nav>
+        <h2>
+            <i class="bi bi-collection-play"></i> {{ playlist.name }}
+            {% if not playlist.is_active %}
+            <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+        </h2>
+        {% if playlist.description %}
+        <p class="text-muted">{{ playlist.description }}</p>
+        {% endif %}
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('playlist.edit', id=playlist.id) }}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Edit Playlist
+        </a>
+    </div>
+</div>
+
+<!-- Playlist Statistics -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted"><i class="bi bi-film"></i> Total Videos</h6>
+                <h3>{{ playlist.video_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted"><i class="bi bi-clock"></i> Total Duration</h6>
+                <h3>{{ playlist.formatted_duration }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted"><i class="bi bi-cpu"></i> Assigned Devices</h6>
+                <h3>{{ assignments|length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Videos in Playlist -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-film"></i> Videos</h5>
+    </div>
+    <div class="card-body">
+        {% if items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th width="50">#</th>
+                        <th>Video</th>
+                        <th>Duration</th>
+                        <th>Resolution</th>
+                        <th>Added</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.position + 1 }}</td>
+                        <td>
+                            {% if item.video.has_thumbnail %}
+                            <img src="{{ url_for('admin.serve_thumbnail', filename=item.video.filename) }}" 
+                                 alt="{{ item.video.title }}" 
+                                 class="img-thumbnail me-2" 
+                                 style="height: 40px;">
+                            {% endif %}
+                            <strong>{{ item.video.title }}</strong>
+                        </td>
+                        <td>{{ item.video.formatted_duration }}</td>
+                        <td>
+                            {% if item.video.width and item.video.height %}
+                            {{ item.video.width }}x{{ item.video.height }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>{{ item.added_at.strftime('%Y-%m-%d') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            <i class="bi bi-info-circle"></i> No videos in this playlist. 
+            <a href="{{ url_for('playlist.edit', id=playlist.id) }}" class="alert-link">Add videos</a> to get started.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Assigned Devices -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-cpu"></i> Assigned Devices</h5>
+    </div>
+    <div class="card-body">
+        {% if assignments %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Device</th>
+                        <th>Serial</th>
+                        <th>Status</th>
+                        <th>Assigned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>
+                            <strong>{{ assignment.device.name }}</strong>
+                        </td>
+                        <td><code>{{ assignment.device.serial }}</code></td>
+                        <td>
+                            {% if assignment.device.is_online %}
+                            <span class="badge bg-success">Online</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Offline</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ assignment.assigned_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            <i class="bi bi-info-circle"></i> This playlist is not assigned to any devices. 
+            <a href="{{ url_for('admin.assignments') }}" class="alert-link">Manage assignments</a>.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

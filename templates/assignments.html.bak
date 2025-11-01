@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Assignments - PiCMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-link-45deg"></i> Content Assignments</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
+            <i class="bi bi-plus-circle"></i> New Assignment
+        </button>
+    </div>
+    
+    <!-- Current Assignments -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Current Assignments</h5>
+        </div>
+        <div class="card-body">
+            {% if assignments %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Device</th>
+                            <th>Type</th>
+                            <th>Content</th>
+                            <th>Assigned At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assignments %}
+                        <tr>
+                            <td>
+                                <strong>{{ assignment.device.name }}</strong><br>
+                                <small class="text-muted">{{ assignment.device.serial }}</small>
+                            </td>
+                            <td>
+                                {% if assignment.video_id %}
+                                <span class="badge bg-primary"><i class="bi bi-film"></i> Video</span>
+                                {% else %}
+                                <span class="badge bg-info"><i class="bi bi-collection-play"></i> Playlist</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if assignment.video_id %}
+                                <strong>{{ assignment.video.title }}</strong><br>
+                                <small class="text-muted">{{ assignment.video.filename }}</small>
+                                {% else %}
+                                <strong>{{ assignment.playlist.name }}</strong><br>
+                                <small class="text-muted">{{ assignment.playlist.video_count }} videos</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ assignment.assigned_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-danger" 
+                                        onclick="confirmDelete({{ assignment.id }})">
+                                    <i class="bi bi-trash"></i> Remove
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-link-45deg display-1 text-muted"></i>
+                <p class="lead text-muted mt-3">No assignments created yet.</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
+                    <i class="bi bi-plus-circle"></i> Create First Assignment
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Assignment Summary by Device -->
+    {% if devices %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Assignment Summary by Device</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                            <p class="mb-2">
+                                <strong>Assignments:</strong> {{ device.assignments.count() }}
+                            </p>
+                            {% if device.assignments.count() > 0 %}
+                            <ul class="list-unstyled mb-2">
+                                {% for assignment in device.assignments %}
+                                <li>
+                                    <small>
+                                        {% if assignment.video_id %}
+                                        <i class="bi bi-film"></i> {{ assignment.video.title }}
+                                        {% else %}
+                                        <i class="bi bi-collection-play"></i> {{ assignment.playlist.name }}
+                                        {% endif %}
+                                    </small>
+                                </li>
+                                {% endfor %}
+                            </ul>% else %}
+                                <span class="badge bg-secondary">Offline</span>
+                                {% endif %}
+                            </h6>
+                            <p class="text-muted mb-2"><small>{{ device.serial }}</small></p>
+                            <p class="mb-2">
+                                <strong>Assigned Videos:</strong> {{ device.assignments.count() }}
+                            </p>
+                            {% if device.assignments.count() > 0 %}
+                            <ul class="list-unstyled mb-2">
+                                {% for assignment in device.assignments %}
+                                <li><small>• {{ assignment.video.title }}</small></li>
+            <form action="{{ url_for('admin.assign_video') }}" method="POST" id="assignForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Assign Content to Devices</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Content Type Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Content Type</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="content_type" id="typeVideo" value="video" checked>
+                            <label class="btn btn-outline-primary" for="typeVideo">
+                                <i class="bi bi-film"></i> Single Video
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="content_type" id="typePlaylist" value="playlist">
+                            <label class="btn btn-outline-primary" for="typePlaylist">
+                                <i class="bi bi-collection-play"></i> Playlist
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            Note: Assigning content will replace any existing assignments for the selected device(s).
+                        </small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Select Devices</h6>
+                            {% if devices %}
+                            <div class="form-check-group" style="max-height: 300px; overflow-y: auto;">
+                                {% for device in devices %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="device_ids" value="{{ device.id }}" 
+                                           id="device{{ device.id }}">
+                                    <label class="form-check-label" for="device{{ device.id }}">
+                                        {{ device.name }} 
+                                        <small class="text-muted">({{ device.serial }})</small>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted">No devices available. Please add devices first.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <!-- Videos Selection -->
+                            <div id="videosSection">
+                                <h6>Select Videos</h6>
+                                {% if videos %}
+                                <div class="form-check-group" style="max-height: 300px; overflow-y: auto;">
+                                    {% for video in videos %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="video_ids" value="{{ video.id }}" 
+                                               id="video{{ video.id }}">
+                                        <label class="form-check-label" for="video{{ video.id }}">
+                                            {{ video.title }} 
+                                            <small class="text-muted">({{ video.formatted_size }})</small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-muted">No videos available. Please upload videos first.</p>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Playlists Selection -->
+                            <div id="playlistsSection" style="display: none;">
+                                <h6>Select Playlists</h6>
+                                {% if playlists %}
+                                <div class="form-check-group" style="max-height: 300px; overflow-y: auto;">
+                                    {% for playlist in playlists %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="playlist_ids" value="{{ playlist.id }}" 
+                                               id="playlist{{ playlist.id }}">
+                                        <label class="form-check-label" for="playlist{{ playlist.id }}">
+                                            {{ playlist.name }} 
+                                            <small class="text-muted">({{ playlist.video_count }} videos)</small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-muted">No playlists available. Please create playlists first.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" 
+                            {% if not devices %}disabled{% endif %}>
+                        <i class="bi bi-plus-circle"></i> Create Assignment
+                    </button>
+                </div>
+            </form>                        id="video{{ video.id }}">
+                                    <label class="form-check-label" for="video{{ video.id }}">
+                                        {{ video.title }} 
+                                        <small class="text-muted">({{ video.formatted_size }})</small>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted">No videos available. Please upload videos first.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" 
+                            {% if not devices or not videos %}disabled{% endif %}>
+                        <i class="bi bi-plus-circle"></i> Create Assignment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Forms -->
+<form id="deleteForm" method="POST" style="display: none;"></form>
+<form id="clearDeviceForm" method="POST" style="display: none;"></form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Toggle between videos and playlists
+document.addEventListener('DOMContentLoaded', function() {
+    const typeVideo = document.getElementById('typeVideo');
+    const typePlaylist = document.getElementById('typePlaylist');
+    const videosSection = document.getElementById('videosSection');
+    const playlistsSection = document.getElementById('playlistsSection');
+    
+    function toggleContentType() {
+        if (typeVideo.checked) {
+            videosSection.style.display = 'block';
+            playlistsSection.style.display = 'none';
+            // Uncheck all playlists
+            document.querySelectorAll('input[name="playlist_ids"]').forEach(cb => cb.checked = false);
+        } else {
+            videosSection.style.display = 'none';
+            playlistsSection.style.display = 'block';
+            // Uncheck all videos
+            document.querySelectorAll('input[name="video_ids"]').forEach(cb => cb.checked = false);
+        }
+    }
+    
+    typeVideo.addEventListener('change', toggleContentType);
+    typePlaylist.addEventListener('change', toggleContentType);
+});
+
+function confirmDelete(assignmentId) {
+    if (confirm('Are you sure you want to remove this assignment?')) {
+        const form = document.getElementById('deleteForm');
+        form.action = `/assignments/delete/${assignmentId}`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        form.submit();
+    }
+}
+
+function confirmClearDevice(deviceId, deviceName) {
+    if (confirm(`Are you sure you want to clear all assignments for "${deviceName}"?`)) {
+        const form = document.getElementById('clearDeviceForm');
+        form.action = `/assignments/clear-device/${deviceId}`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

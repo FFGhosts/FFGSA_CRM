@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </h1>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">Total Videos</h6>
+                            <h2 class="mb-0">{{ total_videos }}</h2>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-film"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">Online Devices</h6>
+                            <h2 class="mb-0">{{ online_devices }} / {{ total_devices }}</h2>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-wifi"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">Assignments</h6>
+                            <h2 class="mb-0">{{ total_assignments }}</h2>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-link-45deg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">Storage Used</h6>
+                            <h2 class="mb-0">{{ "%.2f"|format(total_storage / 1024 / 1024 / 1024) }} GB</h2>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-hdd"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-film"></i> Recent Videos</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_videos %}
+                    <div class="list-group">
+                        {% for video in recent_videos %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ video.title }}</h6>
+                                    <small class="text-muted">
+                                        {{ video.formatted_size }} | {{ video.formatted_duration }}
+                                    </small>
+                                </div>
+                                <small class="text-muted">
+                                    {{ video.uploaded_at.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No videos uploaded yet.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin.videos') }}" class="btn btn-sm btn-primary">
+                        View All Videos
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-cpu"></i> Device Status</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_devices %}
+                    <div class="list-group">
+                        {% for device in recent_devices %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {{ device.name }}
+                                        {% if device.is_online %}
+                                        <span class="badge bg-success">Online</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Offline</span>
+                                        {% endif %}
+                                    </h6>
+                                    <small class="text-muted">
+                                        {{ device.serial }} | {{ device.ip_address or 'No IP' }}
+                                    </small>
+                                </div>
+                                <small class="text-muted">
+                                    {% if device.last_seen %}
+                                    {{ device.last_seen.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                    Never
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No devices registered yet.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin.devices') }}" class="btn btn-sm btn-success">
+                        View All Devices
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}System Updates - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-3"><i class="fas fa-download"></i> System Updates</h1>
+            <p class="text-muted">Manage software updates for Raspberry Pi devices</p>
+        </div>
+    </div>
+
+    <!-- Upload New Update -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-cloud-upload-alt"></i> Upload New Update</h5>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="version">Version <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="version" name="version" 
+                                           placeholder="e.g., 2.0.0" required>
+                                    <small class="form-text text-muted">Use semantic versioning (X.Y.Z)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="description">Description</label>
+                                    <input type="text" class="form-control" id="description" name="description" 
+                                           placeholder="e.g., Bug fixes and performance improvements">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="is_critical" name="is_critical">
+                                        <label class="form-check-label" for="is_critical">
+                                            <i class="fas fa-exclamation-triangle text-danger"></i> Critical Update
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update_file">Update File <span class="text-danger">*</span></label>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="update_file" name="update_file" 
+                                       accept=".tar.gz,.zip,.deb" required onchange="updateFileName(this)">
+                                <label class="custom-file-label" for="update_file">Choose file...</label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Supported formats: .tar.gz, .zip, .deb (Max 500MB)
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> Update files should contain the complete player software package.
+                            Devices will download and install this package when the update is deployed.
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Upload Update
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Updates -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Available Updates</h5>
+                </div>
+                <div class="card-body">
+                    {% if updates %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Version</th>
+                                    <th>Description</th>
+                                    <th>Release Date</th>
+                                    <th>File Size</th>
+                                    <th>Status</th>
+                                    <th>Deployed To</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for update in updates %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ update.version }}</strong>
+                                        {% if update.is_critical %}
+                                        <span class="badge badge-danger ml-1">Critical</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ update.description or '-' }}</td>
+                                    <td>{{ update.release_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% if update.file_size %}
+                                        {{ (update.file_size / 1024 / 1024) | round(2) }} MB
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{% if update.status == 'available' %}success{% elif update.status == 'mandatory' %}danger{% else %}secondary{% endif %}">
+                                            {{ update.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" onclick="showDeployedDevices({{ update.id }})">
+                                            <i class="fas fa-list"></i> View ({{ update.device_updates.count() }})
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-success" onclick="showDeployModal({{ update.id }}, '{{ update.version }}')">
+                                                <i class="fas fa-rocket"></i> Deploy
+                                            </button>
+                                            <a href="{{ update.file_path }}" class="btn btn-primary" download>
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <button class="btn btn-danger" onclick="confirmDelete({{ update.id }}, '{{ update.version }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-download display-1 text-muted"></i>
+                        <p class="lead text-muted mt-3">No updates available yet.</p>
+                        <p class="text-muted">Upload your first update package above.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Update Status -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-desktop"></i> Device Update Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Device</th>
+                                    <th>Current Version</th>
+                                    <th>Status</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for device in devices %}
+                                <tr>
+                                    <td>{{ device.name }}</td>
+                                    <td>
+                                        <code>{{ device.software_version if device.software_version else '1.0.0' }}</code>
+                                    </td>
+                                    <td>
+                                        {% if device.is_online %}
+                                        <span class="badge badge-success">Online</span>
+                                        {% else %}
+                                        <span class="badge badge-secondary">Offline</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if device.last_seen %}
+                                        {{ device.last_seen.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                        Never
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deploy Update Modal -->
+<div class="modal fade" id="deployModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <h5 class="modal-title">
+                    <i class="fas fa-rocket"></i> Deploy Update <span id="deployVersion"></span>
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Select devices to deploy this update:</p>
+                
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleAllDevices()">
+                    <label class="form-check-label" for="selectAll">
+                        <strong>Select All Devices</strong>
+                    </label>
+                </div>
+                
+                <hr>
+                
+                <div class="device-list" style="max-height: 300px; overflow-y: auto;">
+                    {% for device in devices %}
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input device-checkbox" 
+                               id="device_{{ device.id }}" value="{{ device.id }}">
+                        <label class="form-check-label" for="device_{{ device.id }}">
+                            {{ device.name }}
+                            <small class="text-muted">(v{{ device.software_version if device.software_version else '1.0.0' }})</small>
+                            {% if device.is_online %}
+                            <span class="badge badge-success badge-sm">Online</span>
+                            {% else %}
+                            <span class="badge badge-secondary badge-sm">Offline</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> Devices will download and install the update within 5 minutes.
+                    Ensure devices are online and have sufficient storage space.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="deployUpdate()">
+                    <i class="fas fa-rocket"></i> Deploy Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentUpdateId = null;
+
+function updateFileName(input) {
+    const fileName = input.files[0]?.name || 'Choose file...';
+    const label = input.nextElementSibling;
+    label.textContent = fileName;
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('is_critical', document.getElementById('is_critical').checked ? 'true' : 'false');
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Show progress
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        
+        const response = await fetch('/api/system-updates', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Update';
+        }
+    } catch (error) {
+        alert('Error uploading update: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Update';
+    }
+});
+
+function showDeployModal(updateId, version) {
+    currentUpdateId = updateId;
+    document.getElementById('deployVersion').textContent = `v${version}`;
+    
+    // Reset checkboxes
+    document.getElementById('selectAll').checked = false;
+    document.querySelectorAll('.device-checkbox').forEach(cb => cb.checked = false);
+    
+    $('#deployModal').modal('show');
+}
+
+function toggleAllDevices() {
+    const selectAll = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.device-checkbox').forEach(cb => {
+        cb.checked = selectAll;
+    });
+}
+
+async function deployUpdate() {
+    const selectedDevices = Array.from(document.querySelectorAll('.device-checkbox:checked'))
+        .map(cb => parseInt(cb.value));
+    
+    if (selectedDevices.length === 0) {
+        alert('Please select at least one device');
+        return;
+    }
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch(`/api/system-updates/${currentUpdateId}/deploy`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                device_ids: selectedDevices
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            $('#deployModal').modal('hide');
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error deploying update: ' + error.message);
+    }
+}
+
+async function confirmDelete(updateId, version) {
+    if (!confirm(`Are you sure you want to delete update v${version}?\nThis will also cancel any pending deployments.`)) {
+        return;
+    }
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch(`/api/system-updates/${updateId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error deleting update: ' + error.message);
+    }
+}
+
+function showDeployedDevices(updateId) {
+    // This would open a modal showing which devices have this update deployed/installed
+    window.location.href = `/system-updates/${updateId}/status`;
+}
+</script>
+{% endblock %}
+

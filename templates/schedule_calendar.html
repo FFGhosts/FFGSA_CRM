@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Calendar{% endblock %}
+
+{% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+<style>
+    .fc-event {
+        cursor: pointer;
+    }
+    .calendar-controls {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    #calendar {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .fc .fc-button-primary {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+    }
+    .fc .fc-button-primary:hover {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        opacity: 0.9;
+    }
+    .fc .fc-button-primary:not(:disabled):active,
+    .fc .fc-button-primary:not(:disabled).fc-button-active {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+    }
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar3"></i> Schedule Calendar</h2>
+    <div>
+        <a href="{{ url_for('admin.schedules') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-list-ul"></i> List View
+        </a>
+        <a href="{{ url_for('admin.create_schedule') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Schedule
+        </a>
+    </div>
+</div>
+
+<!-- Calendar Controls -->
+<div class="calendar-controls">
+    <div class="row align-items-end">
+        <div class="col-md-4">
+            <label for="deviceFilter" class="form-label">Filter by Device</label>
+            <select id="deviceFilter" class="form-select">
+                <option value="">All Devices</option>
+                {% for device in devices %}
+                <option value="{{ device.id }}">{{ device.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="deviceGroupFilter" class="form-label">Filter by Device Group</label>
+            <select id="deviceGroupFilter" class="form-select">
+                <option value="">All Groups</option>
+                {% for group in device_groups %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button id="clearFilters" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-x-circle"></i> Clear Filters
+            </button>
+        </div>
+    </div>
+    
+    <!-- Legend -->
+    <div class="mt-3">
+        <strong>Legend:</strong>
+        <div class="mt-2">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3788d8;"></div>
+                <span>Video Schedule</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #28a745;"></div>
+                <span>Playlist Schedule</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff9800;"></div>
+                <span>Override/Exception</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendar -->
+<div id="calendar"></div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalLabel">Schedule Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="eventModalBody">
+                <!-- Event details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="editScheduleBtn" class="btn btn-primary">
+                    <i class="bi bi-pencil"></i> Edit Schedule
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    const deviceFilter = document.getElementById('deviceFilter');
+    const deviceGroupFilter = document.getElementById('deviceGroupFilter');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    const eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+    
+    let currentScheduleId = null;
+    
+    // Initialize FullCalendar
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        height: 'auto',
+        navLinks: true,
+        editable: false,
+        dayMaxEvents: true,
+        events: function(info, successCallback, failureCallback) {
+            // Build URL with filters
+            let url = '{{ url_for("admin.schedule_calendar_events") }}';
+            const params = new URLSearchParams({
+                start: info.startStr,
+                end: info.endStr
+            });
+            
+            if (deviceFilter.value) {
+                params.append('device_id', deviceFilter.value);
+            }
+            if (deviceGroupFilter.value) {
+                params.append('device_group_id', deviceGroupFilter.value);
+            }
+            
+            fetch(`${url}?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    successCallback(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching events:', error);
+                    failureCallback(error);
+                });
+        },
+        eventClick: function(info) {
+            const event = info.event;
+            const props = event.extendedProps;
+            
+            currentScheduleId = props.scheduleId;
+            
+            // Format event details
+            const startTime = event.allDay ? 'All Day' : event.start.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+            const endTime = event.end && !event.allDay ? ' - ' + event.end.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : '';
+            
+            const detailsHtml = `
+                <div class="mb-3">
+                    <strong>Schedule:</strong> ${event.title}
+                </div>
+                <div class="mb-3">
+                    <strong>Time:</strong> ${startTime}${endTime}
+                </div>
+                <div class="mb-3">
+                    <strong>Content Type:</strong> 
+                    <span class="badge bg-${props.contentType === 'video' ? 'primary' : 'success'}">
+                        ${props.contentType}
+                    </span>
+                </div>
+                <div class="mb-3">
+                    <strong>Content:</strong> ${props.contentName || 'N/A'}
+                </div>
+                <div class="mb-3">
+                    <strong>Target:</strong> ${props.target}
+                </div>
+                <div class="mb-3">
+                    <strong>Priority:</strong> ${props.priority}
+                </div>
+                ${props.hasException ? '<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle"></i> This schedule has an exception on this date</div>' : ''}
+            `;
+            
+            document.getElementById('eventModalBody').innerHTML = detailsHtml;
+            document.getElementById('editScheduleBtn').href = `/schedules/${props.scheduleId}/edit`;
+            
+            eventModal.show();
+        },
+        eventDidMount: function(info) {
+            // Add tooltip
+            const props = info.event.extendedProps;
+            info.el.title = `${info.event.title}\n${props.contentName}\nPriority: ${props.priority}`;
+        }
+    });
+    
+    calendar.render();
+    
+    // Filter change handlers
+    deviceFilter.addEventListener('change', function() {
+        if (this.value) {
+            deviceGroupFilter.value = '';
+        }
+        calendar.refetchEvents();
+    });
+    
+    deviceGroupFilter.addEventListener('change', function() {
+        if (this.value) {
+            deviceFilter.value = '';
+        }
+        calendar.refetchEvents();
+    });
+    
+    clearFiltersBtn.addEventListener('click', function() {
+        deviceFilter.value = '';
+        deviceGroupFilter.value = '';
+        calendar.refetchEvents();
+    });
+});
+</script>
+{% endblock %}

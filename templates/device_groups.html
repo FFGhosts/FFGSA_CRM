@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Device Groups - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-collection"></i> Device Groups</h1>
+            <p class="text-muted">Organize devices into groups for easier management</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('groups.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Group
+            </a>
+        </div>
+    </div>
+
+    {% if groups %}
+    <div class="row">
+        {% for group in groups %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header" style="background-color: {{ group.color }}; color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-folder"></i> {{ group.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if group.description %}
+                    <p class="text-muted">{{ group.description }}</p>
+                    {% else %}
+                    <p class="text-muted fst-italic">No description</p>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><i class="bi bi-cpu"></i> Total Devices:</span>
+                            <span class="badge bg-primary">{{ group.device_count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-wifi"></i> Online:</span>
+                            <span class="badge bg-success">{{ group.online_device_count }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100" role="group">
+                        <a href="{{ url_for('groups.view', group_id=group.id) }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        <a href="{{ url_for('groups.edit', group_id=group.id) }}" 
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                data-bs-toggle="modal" data-bs-target="#deleteModal{{ group.id }}">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal{{ group.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Delete Group</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete group "<strong>{{ group.name }}</strong>"?</p>
+                        <p class="text-muted">This will not delete the devices, only the group. Devices will remain unaffected.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form method="POST" action="{{ url_for('groups.delete', group_id=group.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-danger">Delete Group</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No device groups created yet. 
+        <a href="{{ url_for('groups.create') }}">Create your first group</a> to organize your devices.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

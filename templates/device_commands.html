@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}Command History - {{ device.name }} - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-terminal"></i> Command History</h1>
+            <p class="text-muted">
+                Device: <strong>{{ device.name }}</strong> ({{ device.serial }})
+            </p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('admin.devices') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Devices
+            </a>
+        </div>
+    </div>
+
+    {% if commands %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Command</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Acknowledged</th>
+                            <th>Completed</th>
+                            <th>Duration</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cmd in commands %}
+                        <tr>
+                            <td>{{ cmd.id }}</td>
+                            <td>
+                                {% if cmd.command_type == 'restart' %}
+                                <i class="bi bi-arrow-clockwise text-primary"></i> Restart
+                                {% elif cmd.command_type == 'update' %}
+                                <i class="bi bi-download text-info"></i> Update
+                                {% elif cmd.command_type == 'clear_cache' %}
+                                <i class="bi bi-trash text-warning"></i> Clear Cache
+                                {% elif cmd.command_type == 'sync_now' %}
+                                <i class="bi bi-arrow-repeat text-success"></i> Force Sync
+                                {% else %}
+                                <i class="bi bi-terminal"></i> {{ cmd.command_type }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cmd.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% elif cmd.status == 'acknowledged' %}
+                                <span class="badge bg-info">Acknowledged</span>
+                                {% elif cmd.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                                {% elif cmd.status == 'failed' %}
+                                <span class="badge bg-danger">Failed</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ cmd.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                {% if cmd.acknowledged_at %}
+                                {{ cmd.acknowledged_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cmd.completed_at %}
+                                {{ cmd.completed_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cmd.completed_at and cmd.created_at %}
+                                {{ ((cmd.completed_at - cmd.created_at).total_seconds())|round(1) }}s
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cmd.result %}
+                                <span class="text-truncate" style="max-width: 200px; display: inline-block;" 
+                                      title="{{ cmd.result }}">
+                                    {{ cmd.result }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No commands sent to this device yet.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

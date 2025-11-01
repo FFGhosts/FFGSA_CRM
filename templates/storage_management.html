@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}Storage Management - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-hdd"></i> Storage Management</h1>
+            <p class="text-muted">Manage video storage and cleanup unused files</p>
+        </div>
+    </div>
+
+    <!-- Storage Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ "%.2f"|format(stats.total_size_gb) }} GB</h3>
+                    <p class="text-muted mb-0"><i class="bi bi-hdd"></i> Total Storage</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ stats.video_count }}</h3>
+                    <p class="text-muted mb-0"><i class="bi bi-film"></i> Total Videos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-warning">{{ stats.unassigned_videos }}</h3>
+                    <p class="text-muted mb-0"><i class="bi bi-exclamation-triangle"></i> Unassigned</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-0 text-danger">{{ stats.never_played }}</h3>
+                    <p class="text-muted mb-0"><i class="bi bi-slash-circle"></i> Never Played</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for different cleanup categories -->
+    <ul class="nav nav-tabs mb-3" id="storageTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="unused-tab" data-bs-toggle="tab" data-bs-target="#unused" type="button">
+                <i class="bi bi-trash"></i> Unused ({{ unused_videos|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="old-tab" data-bs-toggle="tab" data-bs-target="#old" type="button">
+                <i class="bi bi-clock-history"></i> Old Files ({{ old_videos|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="large-tab" data-bs-toggle="tab" data-bs-target="#large" type="button">
+                <i class="bi bi-file-earmark-arrow-up"></i> Large Files ({{ large_videos|length }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="storageTabContent">
+        <!-- Unused Videos -->
+        <div class="tab-pane fade show active" id="unused" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Unused Videos (Not assigned in last 30 days)</h5>
+                </div>
+                <div class="card-body">
+                    {% if unused_videos %}
+                    <form method="POST" action="{{ url_for('admin.storage_cleanup') }}" onsubmit="return confirm('Delete selected videos? This cannot be undone!');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllUnused()">
+                                Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllUnused()">
+                                Deselect All
+                            </button>
+                            <button type="submit" class="btn btn-sm btn-danger float-end">
+                                <i class="bi bi-trash"></i> Delete Selected
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="selectAllUnusedCheck" onclick="toggleAllUnused(this)"></th>
+                                        <th>Title</th>
+                                        <th>Size</th>
+                                        <th>Uploaded</th>
+                                        <th>Duration</th>
+                                        <th>Last Played</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for video in unused_videos %}
+                                    <tr>
+                                        <td><input type="checkbox" name="video_ids" value="{{ video.id }}" class="unused-checkbox"></td>
+                                        <td>{{ video.title }}</td>
+                                        <td>{{ video.formatted_size }}</td>
+                                        <td>{{ video.uploaded_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ video.formatted_duration }}</td>
+                                        <td><span class="text-muted">Never</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i> No unused videos found. All videos are actively assigned or recently played.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Old Videos -->
+        <div class="tab-pane fade" id="old" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Old Videos (Uploaded more than 90 days ago)</h5>
+                </div>
+                <div class="card-body">
+                    {% if old_videos %}
+                    <form method="POST" action="{{ url_for('admin.storage_cleanup') }}" onsubmit="return confirm('Delete selected videos? This cannot be undone!');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllOld()">
+                                Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllOld()">
+                                Deselect All
+                            </button>
+                            <button type="submit" class="btn btn-sm btn-danger float-end">
+                                <i class="bi bi-trash"></i> Delete Selected
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" onclick="toggleAllOld(this)"></th>
+                                        <th>Title</th>
+                                        <th>Size</th>
+                                        <th>Uploaded</th>
+                                        <th>Age (Days)</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for video in old_videos %}
+                                    <tr>
+                                        <td><input type="checkbox" name="video_ids" value="{{ video.id }}" class="old-checkbox"></td>
+                                        <td>{{ video.title }}</td>
+                                        <td>{{ video.formatted_size }}</td>
+                                        <td>{{ video.uploaded_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ ((now - video.uploaded_at).days) }}</td>
+                                        <td>
+                                            {% if video.assignments.count() > 0 %}
+                                            <span class="badge bg-success">Assigned</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Unassigned</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No old videos found.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Large Files -->
+        <div class="tab-pane fade" id="large" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Large Videos (Over 100 MB)</h5>
+                </div>
+                <div class="card-body">
+                    {% if large_videos %}
+                    <form method="POST" action="{{ url_for('admin.storage_cleanup') }}" onsubmit="return confirm('Delete selected videos? This cannot be undone!');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllLarge()">
+                                Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllLarge()">
+                                Deselect All
+                            </button>
+                            <button type="submit" class="btn btn-sm btn-danger float-end">
+                                <i class="bi bi-trash"></i> Delete Selected
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" onclick="toggleAllLarge(this)"></th>
+                                        <th>Title</th>
+                                        <th>Size</th>
+                                        <th>Resolution</th>
+                                        <th>Duration</th>
+                                        <th>Uploaded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for video in large_videos %}
+                                    <tr>
+                                        <td><input type="checkbox" name="video_ids" value="{{ video.id }}" class="large-checkbox"></td>
+                                        <td>{{ video.title }}</td>
+                                        <td><strong>{{ video.formatted_size }}</strong></td>
+                                        <td>{{ video.resolution or 'Unknown' }}</td>
+                                        <td>{{ video.formatted_duration }}</td>
+                                        <td>{{ video.uploaded_at.strftime('%Y-%m-%d') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No large videos found.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Unused videos
+function toggleAllUnused(checkbox) {
+    document.querySelectorAll('.unused-checkbox').forEach(cb => cb.checked = checkbox.checked);
+}
+function selectAllUnused() {
+    document.querySelectorAll('.unused-checkbox').forEach(cb => cb.checked = true);
+    document.getElementById('selectAllUnusedCheck').checked = true;
+}
+function deselectAllUnused() {
+    document.querySelectorAll('.unused-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAllUnusedCheck').checked = false;
+}
+
+// Old videos
+function toggleAllOld(checkbox) {
+    document.querySelectorAll('.old-checkbox').forEach(cb => cb.checked = checkbox.checked);
+}
+function selectAllOld() {
+    document.querySelectorAll('.old-checkbox').forEach(cb => cb.checked = true);
+}
+function deselectAllOld() {
+    document.querySelectorAll('.old-checkbox').forEach(cb => cb.checked = false);
+}
+
+// Large videos
+function toggleAllLarge(checkbox) {
+    document.querySelectorAll('.large-checkbox').forEach(cb => cb.checked = checkbox.checked);
+}
+function selectAllLarge() {
+    document.querySelectorAll('.large-checkbox').forEach(cb => cb.checked = true);
+}
+function deselectAllLarge() {
+    document.querySelectorAll('.large-checkbox').forEach(cb => cb.checked = false);
+}
+</script>
+{% endblock %}
+

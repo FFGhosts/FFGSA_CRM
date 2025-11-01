@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Tags - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-tags"></i> Tags
+                <span class="badge bg-info">{{ tags|length }}</span>
+            </h2>
+            <p class="text-muted">Organize content with flexible tags</p>
+        </div>
+        <div class="col-auto">
+            {% if current_user.can_manage_content %}
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTagModal">
+                <i class="bi bi-plus-circle"></i> Create Tag
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if tags %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Tag</th>
+                            <th>Color</th>
+                            <th>Videos</th>
+                            <th>Playlists</th>
+                            <th>Total Usage</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tag in tags %}
+                        <tr>
+                            <td>
+                                <span class="badge" style="background-color: {{ tag.color }}">
+                                    {{ tag.name }}
+                                </span>
+                            </td>
+                            <td>
+                                <input type="color" value="{{ tag.color }}" disabled style="width: 40px; height: 30px; border: none;">
+                            </td>
+                            <td>{{ tag.video_count }}</td>
+                            <td>{{ tag.playlist_count }}</td>
+                            <td><strong>{{ tag.total_usage }}</strong></td>
+                            <td><small>{{ tag.created_at.strftime('%Y-%m-%d') }}</small></td>
+                            <td>
+                                {% if current_user.can_manage_content %}
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" data-bs-toggle="modal" 
+                                            data-bs-target="#editTagModal{{ tag.id }}" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" data-bs-toggle="modal" 
+                                            data-bs-target="#deleteTagModal{{ tag.id }}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No tags created yet.
+        {% if current_user.can_manage_content %}
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createTagModal">
+            Create your first tag
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Tag Modal -->
+<div class="modal fade" id="createTagModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.create_tag') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Create New Tag</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tag Name</label>
+                        <input type="text" name="name" class="form-control" required maxlength="50">
+                        <small class="text-muted">Keep it short and descriptive</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Color</label>
+                        <input type="color" name="color" class="form-control form-control-color" value="#6c757d">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Tag</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Tag Modals -->
+{% for tag in tags %}
+<div class="modal fade" id="editTagModal{{ tag.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.edit_tag', tag_id=tag.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Edit Tag</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tag Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ tag.name }}" required maxlength="50">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Color</label>
+                        <input type="color" name="color" class="form-control form-control-color" value="{{ tag.color }}">
+                    </div>
+                    <div class="alert alert-info">
+                        <small>This tag is used by {{ tag.video_count }} video(s) and {{ tag.playlist_count }} playlist(s)</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Update Tag</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Delete Tag Modals -->
+{% for tag in tags %}
+<div class="modal fade" id="deleteTagModal{{ tag.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete Tag</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the tag <strong>"{{ tag.name }}"</strong>?</p>
+                {% if tag.total_usage > 0 %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    This tag is currently used by:
+                    <ul>
+                        <li>{{ tag.video_count }} video(s)</li>
+                        <li>{{ tag.playlist_count }} playlist(s)</li>
+                    </ul>
+                    The tag will be removed from all content.
+                </div>
+                {% endif %}
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('admin.delete_tag', tag_id=tag.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">Delete Tag</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+

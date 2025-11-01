@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Create Playlist - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('playlist.index') }}">Playlists</a></li>
+                <li class="breadcrumb-item active">Create</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-plus-circle"></i> Create New Playlist</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('playlist.create') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.name.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows="4") }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Optional description for this playlist</small>
+                    </div>
+                    
+                    {% if all_tags %}
+                    <div class="mb-3">
+                        <label for="tags" class="form-label"><i class="bi bi-tags"></i> Tags (Optional)</label>
+                        <select class="form-select" id="tags" name="tags" multiple size="4">
+                            {% for tag in all_tags %}
+                            <option value="{{ tag.id }}" style="background-color: {{ tag.color }}22;">
+                                {{ tag.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple tags</small>
+                    </div>
+                    {% endif %}
+                    
+                    {% if all_categories %}
+                    <div class="mb-3">
+                        <label for="categories" class="form-label"><i class="bi bi-folder"></i> Categories (Optional)</label>
+                        <select class="form-select" id="categories" name="categories" multiple size="4">
+                            {% for category in all_categories %}
+                            <option value="{{ category.id }}" style="background-color: {{ category.color }}22;">
+                                {% if category.icon %}<i class="bi bi-{{ category.icon }}"></i>{% endif %}
+                                {{ category.full_path }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple categories</small>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.is_active(class="form-check-input") }}
+                        {{ form.is_active.label(class="form-check-label") }}
+                        <small class="form-text text-muted d-block">Inactive playlists cannot be assigned to devices</small>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('playlist.index') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-info-circle"></i> About Playlists</h5>
+                <p class="card-text small">
+                    Playlists allow you to organize multiple videos into a sequence. 
+                    You can assign a playlist to a device, and all videos will play in order.
+                </p>
+                <hr>
+                <h6 class="small"><i class="bi bi-lightbulb"></i> Next Steps</h6>
+                <ul class="small mb-0">
+                    <li>After creating, add videos to your playlist</li>
+                    <li>Arrange videos in the desired order</li>
+                    <li>Assign the playlist to one or more devices</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

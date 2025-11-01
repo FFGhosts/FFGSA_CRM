@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}FFGSA_CSM{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    {% if current_user.is_authenticated %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin.dashboard') }}">
+                <i class="bi bi-camera-video"></i> FFGSA_CSM
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" 
+                           href="{{ url_for('admin.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.videos' %}active{% endif %}" 
+                           href="{{ url_for('admin.videos') }}">
+                            <i class="bi bi-film"></i> Videos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint and 'playlist' in request.endpoint %}active{% endif %}" 
+                           href="{{ url_for('playlist.index') }}">
+                            <i class="bi bi-collection-play"></i> Playlists
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.devices' %}active{% endif %}" 
+                           href="{{ url_for('admin.devices') }}">
+                            <i class="bi bi-cpu"></i> Devices
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint and 'groups' in request.endpoint %}active{% endif %}" 
+                           href="{{ url_for('groups.index') }}">
+                            <i class="bi bi-collection"></i> Groups
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.assignments' %}active{% endif %}" 
+                           href="{{ url_for('admin.assignments') }}">
+                            <i class="bi bi-link-45deg"></i> Assignments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint and 'analytics' in request.endpoint %}active{% endif %}" 
+                           href="{{ url_for('analytics.index') }}">
+                            <i class="bi bi-graph-up"></i> Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.realtime_monitoring' %}active{% endif %}" 
+                           href="{{ url_for('admin.realtime_monitoring') }}">
+                            <i class="bi bi-activity"></i> Monitoring
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.storage_management' %}active{% endif %}" 
+                           href="{{ url_for('admin.storage_management') }}">
+                            <i class="bi bi-hdd"></i> Storage
+                        </a>
+                    </li>
+                    {% if current_user.is_operator or current_user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'client.emergency_broadcast_page' %}active{% endif %}" 
+                           href="{{ url_for('client.emergency_broadcast_page') }}">
+                            <i class="bi bi-broadcast text-danger"></i> Emergency
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'client.system_updates_page' %}active{% endif %}" 
+                           href="{{ url_for('client.system_updates_page') }}">
+                            <i class="bi bi-download"></i> Updates
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint and 'schedule' in request.endpoint %}active{% endif %}" 
+                           href="#" id="scheduleDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-calendar-event"></i> Schedules
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.schedules') }}">
+                                <i class="bi bi-list-ul"></i> List View
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.schedule_calendar') }}">
+                                <i class="bi bi-calendar3"></i> Calendar View
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint in ['admin.tags', 'admin.categories'] %}active{% endif %}" 
+                           href="#" id="organizeDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-folder-symlink"></i> Organize
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.tags') }}">
+                                <i class="bi bi-tags"></i> Tags
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.categories') }}">
+                                <i class="bi bi-folder"></i> Categories
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% if current_user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint and 'user' in request.endpoint and request.endpoint != 'userDropdown' %}active{% endif %}" 
+                           href="{{ url_for('admin.users') }}">
+                            <i class="bi bi-people"></i> Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.backup_restore' %}active{% endif %}" 
+                           href="{{ url_for('admin.backup_restore') }}">
+                            <i class="bi bi-cloud-upload"></i> Backup
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link position-relative {% if request.endpoint == 'admin.notifications' %}active{% endif %}" 
+                           href="{{ url_for('admin.notifications') }}" 
+                           id="notificationBell">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                                  style="display: none;">
+                                0
+                            </span>
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ current_user.username }}
+                            {% if current_user.is_admin %}
+                            <span class="badge bg-danger ms-1">Admin</span>
+                            {% elif current_user.is_operator %}
+                            <span class="badge bg-primary ms-1">Operator</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.change_password') }}">
+                                <i class="bi bi-key"></i> Change Password
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.logout') }}">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    
+    <!-- Main Content -->
+    <main class="{% if current_user.is_authenticated %}container my-4{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+        <div class="container">
+            <p class="mb-0">FFGSA_CSM - Raspberry Pi Content Management System &copy; 2025</p>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Socket.IO for Real-Time Features -->
+    {% if current_user.is_authenticated %}
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    {% endif %}
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

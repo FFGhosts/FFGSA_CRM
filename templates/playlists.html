@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Playlists - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-collection-play"></i> Playlists</h2>
+        <p class="text-muted">Manage video playlists for scheduled playback</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('playlist.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create Playlist
+        </a>
+    </div>
+</div>
+
+{% if playlists %}
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for playlist in playlists %}
+    <div class="col">
+        <div class="card h-100 {% if not playlist.is_active %}border-secondary{% endif %}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title">
+                        <i class="bi bi-collection-play"></i> {{ playlist.name }}
+                        {% if not playlist.is_active %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                
+                {% if playlist.description %}
+                <p class="card-text text-muted small">{{ playlist.description[:100] }}{% if playlist.description|length > 100 %}...{% endif %}</p>
+                {% endif %}
+                
+                {% if playlist.tags or playlist.categories %}
+                <div class="mb-2">
+                    {% for tag in playlist.tags %}
+                    <span class="badge me-1" style="background-color: {{ tag.color }};">
+                        <i class="bi bi-tag-fill"></i> {{ tag.name }}
+                    </span>
+                    {% endfor %}
+                    {% for category in playlist.categories %}
+                    <span class="badge me-1" style="background-color: {{ category.color }};">
+                        {% if category.icon %}<i class="bi bi-{{ category.icon }}"></i>{% endif %}
+                        {{ category.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between text-muted small mb-1">
+                        <span><i class="bi bi-film"></i> {{ playlist.video_count }} video(s)</span>
+                        <span><i class="bi bi-clock"></i> {{ playlist.formatted_duration }}</span>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="bi bi-cpu"></i> {{ playlist.assigned_devices }} device(s) assigned
+                    </div>
+                </div>
+                
+                <div class="text-muted small mb-3">
+                    <i class="bi bi-calendar"></i> Updated {{ playlist.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                
+                <div class="btn-group w-100" role="group">
+                    <a href="{{ url_for('playlist.view', id=playlist.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i> View
+                    </a>
+                    <a href="{{ url_for('playlist.edit', id=playlist.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                            onclick="confirmDelete({{ playlist.id }}, '{{ playlist.name }}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No playlists found. 
+    <a href="{{ url_for('playlist.create') }}" class="alert-link">Create your first playlist</a> to get started.
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete playlist "<strong id="playlistName"></strong>"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(playlistId, playlistName) {
+    document.getElementById('playlistName').textContent = playlistName;
+    document.getElementById('deleteForm').action = `/playlists/${playlistId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}
+

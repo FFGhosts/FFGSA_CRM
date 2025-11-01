@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics - FFGSA_CSM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .stat-card h3 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    .stat-card p {
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 30px;
+    }
+    .recent-activity {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .activity-item {
+        border-left: 3px solid #667eea;
+        padding-left: 15px;
+        margin-bottom: 15px;
+    }
+    .activity-time {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-graph-up"></i> Analytics Dashboard</h1>
+            <p class="text-muted">Monitor video playback, device activity, and system usage</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3>{{ total_views }}</h3>
+                <p><i class="bi bi-eye"></i> Total Views</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h3>{{ popular_videos|length }}</h3>
+                <p><i class="bi bi-star"></i> Popular Videos</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <h3>{{ activity|length }}</h3>
+                <p><i class="bi bi-clock-history"></i> Active Days</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <h3>{{ storage.video_count }}</h3>
+                <p><i class="bi bi-database"></i> Total Videos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-bar-chart"></i> Popular Videos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="popularVideosChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-activity"></i> Device Activity (Last 7 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="deviceActivityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-pie-chart"></i> Storage Usage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="storageChart"></canvas>
+                    </div>
+                    <div class="text-center mt-3">
+                        <p class="mb-1"><strong>Total Size:</strong> {{ "%.2f"|format(storage.total_size / 1024 / 1024 / 1024) }} GB</p>
+                        <p class="mb-1"><strong>Video Count:</strong> {{ storage.video_count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-list-ul"></i> Recent Playback Activity</h5>
+                </div>
+                <div class="card-body recent-activity">
+                    {% if recent_logs %}
+                        {% for log in recent_logs %}
+                        <div class="activity-item">
+                            <div>
+                                <strong>{{ log.device.name }}</strong> played 
+                                <a href="{{ url_for('analytics.video_detail', video_id=log.video.id) }}">
+                                    {{ log.video.title }}
+                                </a>
+                            </div>
+                            <div class="activity-time">
+                                <i class="bi bi-clock"></i> {{ log.started_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% if log.duration_played %}
+                                    ({{ log.duration_played }}s)
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center py-4">No playback activity recorded yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Videos Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-trophy"></i> Top Videos by Views</h5>
+                </div>
+                <div class="card-body">
+                    {% if popular_videos %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Title</th>
+                                    <th>Resolution</th>
+                                    <th>Duration</th>
+                                    <th>Views</th>
+                                    <th>Unique Devices</th>
+                                    <th>Last Viewed</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for video in popular_videos %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <a href="{{ url_for('analytics.video_detail', video_id=video.id) }}">
+                                            {{ video.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ video.resolution }}</td>
+                                    <td>{{ video.duration }}s</td>
+                                    <td><span class="badge bg-primary">{{ video.view_count.total_views }}</span></td>
+                                    <td><span class="badge bg-info">{{ video.view_count.unique_devices }}</span></td>
+                                    <td>{{ video.view_count.last_viewed.strftime('%Y-%m-%d %H:%M') if video.view_count.last_viewed else 'Never' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('analytics.video_detail', video_id=video.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-graph-up"></i> Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No video views recorded yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Fetch chart data from API
+fetch('{{ url_for("analytics.chart_data") }}')
+    .then(response => response.json())
+    .then(data => {
+        // Popular Videos Chart
+        const popularCtx = document.getElementById('popularVideosChart').getContext('2d');
+        new Chart(popularCtx, {
+            type: 'bar',
+            data: {
+                labels: data.popular.labels,
+                datasets: [{
+                    label: 'Views',
+                    data: data.popular.views,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Device Activity Chart
+        const activityCtx = document.getElementById('deviceActivityChart').getContext('2d');
+        new Chart(activityCtx, {
+            type: 'line',
+            data: {
+                labels: data.activity.labels,
+                datasets: [{
+                    label: 'Active Devices',
+                    data: data.activity.devices,
+                    borderColor: 'rgba(79, 172, 254, 1)',
+                    backgroundColor: 'rgba(79, 172, 254, 0.2)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
+        // Storage Chart
+        const storageCtx = document.getElementById('storageChart').getContext('2d');
+        new Chart(storageCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used', 'Free'],
+                datasets: [{
+                    data: [data.storage.used, data.storage.free],
+                    backgroundColor: [
+                        'rgba(245, 87, 108, 0.8)',
+                        'rgba(67, 233, 123, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(245, 87, 108, 1)',
+                        'rgba(67, 233, 123, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error loading chart data:', error);
+    });
+</script>
+{% endblock %}
+

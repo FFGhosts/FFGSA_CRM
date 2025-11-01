@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Preferences - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-gear"></i> Notification Preferences</h1>
+            <p class="text-muted">Configure how and when you receive notifications</p>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.notification_preferences') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Global Settings -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-toggles"></i> Global Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="email_enabled" name="email_enabled"
+                                   {% if prefs.email_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="email_enabled">
+                                <strong>Enable Email Notifications</strong>
+                                <small class="d-block text-muted">Receive notifications via email</small>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="browser_enabled" name="browser_enabled"
+                                   {% if prefs.browser_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="browser_enabled">
+                                <strong>Enable Browser Notifications</strong>
+                                <small class="d-block text-muted">Receive real-time notifications in browser</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Note:</strong> Disabling these will prevent all notifications of that type, 
+                    regardless of individual event settings below.
+                </div>
+            </div>
+        </div>
+
+        <!-- Event-Specific Preferences -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-bell"></i> Event Notifications</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Event Type</th>
+                                <th class="text-center">Email</th>
+                                <th class="text-center">Browser</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Device Offline -->
+                            <tr>
+                                <td>
+                                    <i class="bi bi-cpu text-warning"></i>
+                                    <strong>Device Offline</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="device_offline_email" name="device_offline_email"
+                                               {% if prefs.device_offline_email %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="device_offline_browser" name="device_offline_browser"
+                                               {% if prefs.device_offline_browser %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td><small>When a device goes offline for more than 10 minutes</small></td>
+                            </tr>
+
+                            <!-- Upload Complete -->
+                            <tr>
+                                <td>
+                                    <i class="bi bi-cloud-upload text-success"></i>
+                                    <strong>Upload Complete</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="upload_complete_email" name="upload_complete_email"
+                                               {% if prefs.upload_complete_email %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="upload_complete_browser" name="upload_complete_browser"
+                                               {% if prefs.upload_complete_browser %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td><small>When your video upload finishes successfully</small></td>
+                            </tr>
+
+                            <!-- Backup Success -->
+                            <tr>
+                                <td>
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    <strong>Backup Success</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="backup_success_email" name="backup_success_email"
+                                               {% if prefs.backup_success_email %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="backup_success_browser" name="backup_success_browser"
+                                               {% if prefs.backup_success_browser %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td><small>When scheduled backup completes successfully</small></td>
+                            </tr>
+
+                            <!-- Backup Failure -->
+                            <tr>
+                                <td>
+                                    <i class="bi bi-x-circle text-danger"></i>
+                                    <strong>Backup Failure</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="backup_failure_email" name="backup_failure_email"
+                                               {% if prefs.backup_failure_email %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="backup_failure_browser" name="backup_failure_browser"
+                                               {% if prefs.backup_failure_browser %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td><small>When backup fails or backups are outdated</small></td>
+                            </tr>
+
+                            <!-- System Error -->
+                            <tr>
+                                <td>
+                                    <i class="bi bi-exclamation-triangle text-danger"></i>
+                                    <strong>System Error</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="system_error_email" name="system_error_email"
+                                               {% if prefs.system_error_email %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="system_error_browser" name="system_error_browser"
+                                               {% if prefs.system_error_browser %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td><small>Critical system errors that require attention</small></td>
+                            </tr>
+
+                            <!-- Schedule Conflict -->
+                            <tr>
+                                <td>
+                                    <i class="bi bi-calendar-x text-warning"></i>
+                                    <strong>Schedule Conflict</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="schedule_conflict_email" name="schedule_conflict_email"
+                                               {% if prefs.schedule_conflict_email %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="schedule_conflict_browser" name="schedule_conflict_browser"
+                                               {% if prefs.schedule_conflict_browser %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td><small>When schedules have overlapping times</small></td>
+                            </tr>
+
+                            <!-- Storage Warning -->
+                            <tr>
+                                <td>
+                                    <i class="bi bi-hdd text-warning"></i>
+                                    <strong>Storage Warning</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="storage_warning_email" name="storage_warning_email"
+                                               {% if prefs.storage_warning_email %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="storage_warning_browser" name="storage_warning_browser"
+                                               {% if prefs.storage_warning_browser %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td><small>When storage space is running low (80%+ used)</small></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Preferences -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Email Reports</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="daily_summary_email" name="daily_summary_email"
+                                   {% if prefs.daily_summary_email %}checked{% endif %}>
+                            <label class="form-check-label" for="daily_summary_email">
+                                <strong>Daily Summary Email</strong>
+                                <small class="d-block text-muted">Receive daily activity summary at 8 AM</small>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="weekly_report_email" name="weekly_report_email"
+                                   {% if prefs.weekly_report_email %}checked{% endif %}>
+                            <label class="form-check-label" for="weekly_report_email">
+                                <strong>Weekly Report Email</strong>
+                                <small class="d-block text-muted">Receive weekly statistics every Monday</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <strong>Coming Soon:</strong> Email report generation will be available in a future update.
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row">
+            <div class="col">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-save"></i> Save Preferences
+                </button>
+                <a href="{{ url_for('admin.notifications') }}" class="btn btn-secondary btn-lg">
+                    <i class="bi bi-arrow-left"></i> Back to Notifications
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

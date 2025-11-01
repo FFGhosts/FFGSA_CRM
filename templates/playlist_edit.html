@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ playlist.name }} - FFGSA_CSM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sortable-list {
+        list-style: none;
+        padding: 0;
+    }
+    .sortable-item {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        cursor: move;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .sortable-item:hover {
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    }
+    .sortable-item.dragging {
+        opacity: 0.5;
+    }
+    .drag-handle {
+        color: #6c757d;
+        margin-right: 1rem;
+        font-size: 1.5rem;
+    }
+    .video-thumbnail {
+        width: 80px;
+        height: 45px;
+        object-fit: cover;
+        border-radius: 0.25rem;
+        margin-right: 1rem;
+    }
+    .video-info {
+        flex-grow: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('playlist.index') }}">Playlists</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('playlist.view', id=playlist.id) }}">{{ playlist.name }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-pencil"></i> Edit Playlist</h2>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Playlist Details -->
+    <div class="col-lg-5 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Playlist Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('playlist.edit', id=playlist.id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.name.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows="3") }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if all_tags %}
+                    <div class="mb-3">
+                        <label for="tags" class="form-label"><i class="bi bi-tags"></i> Tags</label>
+                        <select class="form-select" id="tags" name="tags" multiple size="4">
+                            {% for tag in all_tags %}
+                            <option value="{{ tag.id }}" 
+                                    {% if tag in playlist.tags %}selected{% endif %}
+                                    style="background-color: {{ tag.color }}22;">
+                                {{ tag.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                    {% endif %}
+                    
+                    {% if all_categories %}
+                    <div class="mb-3">
+                        <label for="categories" class="form-label"><i class="bi bi-folder"></i> Categories</label>
+                        <select class="form-select" id="categories" name="categories" multiple size="4">
+                            {% for category in all_categories %}
+                            <option value="{{ category.id }}"
+                                    {% if category in playlist.categories %}selected{% endif %}
+                                    style="background-color: {{ category.color }}22;">
+                                {% if category.icon %}<i class="bi bi-{{ category.icon }}"></i>{% endif %}
+                                {{ category.full_path }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.is_active(class="form-check-input") }}
+                        {{ form.is_active.label(class="form-check-label") }}
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('playlist.view', id=playlist.id) }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Add Video Form -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Video</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('playlist.add_video', id=playlist.id) }}">
+                    {{ add_video_form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ add_video_form.video_id.label(class="form-label") }}
+                        {{ add_video_form.video_id(class="form-select" + (" is-invalid" if add_video_form.video_id.errors else "")) }}
+                        {% if add_video_form.video_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in add_video_form.video_id.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    {{ add_video_form.submit(class="btn btn-success w-100") }}
+                </form>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="card mt-4 bg-light">
+            <div class="card-body">
+                <h6><i class="bi bi-bar-chart"></i> Statistics</h6>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Videos:</span>
+                    <strong>{{ items|length }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Total Duration:</span>
+                    <strong>{{ playlist.formatted_duration }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Video List with Drag-and-Drop -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-film"></i> Videos in Playlist</h5>
+                {% if items %}
+                <small class="text-muted">Drag to reorder</small>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if items %}
+                <ul class="sortable-list" id="videoList">
+                    {% for item in items %}
+                    <li class="sortable-item" data-item-id="{{ item.id }}">
+                        <i class="bi bi-grip-vertical drag-handle"></i>
+                        
+                        {% if item.video.has_thumbnail %}
+                        <img src="{{ url_for('admin.serve_thumbnail', filename=item.video.filename.rsplit('.', 1)[0] + '.jpg') }}" 
+                             alt="{{ item.video.title }}" 
+                             class="video-thumbnail">
+                        {% else %}
+                        <div class="video-thumbnail bg-secondary d-flex align-items-center justify-content-center">
+                            <i class="bi bi-film text-white"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="video-info">
+                            <div>
+                                <strong>{{ item.position + 1 }}.</strong>
+                                <strong>{{ item.video.title }}</strong>
+                            </div>
+                            <small class="text-muted">
+                                {{ item.video.formatted_duration }}
+                                {% if item.video.width and item.video.height %}
+                                • {{ item.video.width }}x{{ item.video.height }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('playlist.remove_video', id=playlist.id, item_id=item.id) }}" 
+                              class="d-inline" onsubmit="return confirm('Remove this video from the playlist?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No videos in this playlist. Use the form on the left to add videos.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Drag and Drop functionality
+const videoList = document.getElementById('videoList');
+
+if (videoList) {
+    let draggedItem = null;
+    
+    // Make items draggable
+    const items = videoList.querySelectorAll('.sortable-item');
+    items.forEach(item => {
+        item.draggable = true;
+        
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            draggedItem = null;
+        });
+        
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(videoList, e.clientY);
+            if (afterElement == null) {
+                videoList.appendChild(draggedItem);
+            } else {
+                videoList.insertBefore(draggedItem, afterElement);
+            }
+        });
+    });
+    
+    // Save new order on drop
+    videoList.addEventListener('drop', (e) => {
+        e.preventDefault();
+        saveOrder();
+    });
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.sortable-item:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+    
+    function saveOrder() {
+        const items = videoList.querySelectorAll('.sortable-item');
+        const order = Array.from(items).map(item => parseInt(item.dataset.itemId));
+        
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Send new order to server
+        fetch('{{ url_for("playlist.reorder", id=playlist.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ order: order })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update position numbers
+                items.forEach((item, index) => {
+                    const posText = item.querySelector('.video-info strong:first-child');
+                    if (posText) {
+                        posText.textContent = (index + 1) + '.';
+                    }
+                });
+                
+                // Show success message (optional)
+                showToast('Playlist order updated successfully', 'success');
+            } else {
+                showToast('Failed to update order: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error updating playlist order', 'error');
+        });
+    }
+    
+    function showToast(message, type) {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 start-50 translate-middle-x mt-3`;
+        toast.style.zIndex = '9999';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+}
+</script>
+{% endblock %}
+

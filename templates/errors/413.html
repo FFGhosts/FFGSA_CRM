@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}413 - File Too Large{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 text-center">
+            <h1 class="display-1">413</h1>
+            <h2 class="mb-4">File Too Large</h2>
+            <p class="lead text-muted">
+                The file you're trying to upload exceeds the maximum size limit (500MB).
+            </p>
+            <a href="{{ url_for('admin.videos') }}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Back to Videos
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

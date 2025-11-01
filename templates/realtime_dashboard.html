@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Real-Time Monitoring{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Real-Time Device Monitoring</h2>
+        <div>
+            <span class="badge" id="connection-status">
+                <i class="bi bi-circle-fill"></i> Connecting...
+            </span>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Devices</h6>
+                    <h3 class="card-title mb-0" id="total-devices">{{ devices|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Online</h6>
+                    <h3 class="card-title mb-0 text-success" id="online-devices">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Playing</h6>
+                    <h3 class="card-title mb-0 text-primary" id="playing-devices">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Offline</h6>
+                    <h3 class="card-title mb-0 text-danger" id="offline-devices">{{ devices|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Device Grid -->
+    <div class="row" id="device-grid">
+        {% for device in devices %}
+        <div class="col-md-4 col-lg-3 mb-3" data-device-id="{{ device.id }}">
+            <div class="card device-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>{{ device.name }}</strong>
+                    <span class="badge bg-secondary status-badge">Offline</span>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        <small class="text-muted">Serial:</small><br>
+                        <span class="device-serial">{{ device.serial_number }}</span>
+                    </p>
+                    <p class="mb-1">
+                        <small class="text-muted">Location:</small><br>
+                        <span>{{ device.location or 'Not set' }}</span>
+                    </p>
+                    <p class="mb-1">
+                        <small class="text-muted">Last Seen:</small><br>
+                        <span class="last-seen">
+                            {% if device.last_seen %}
+                                {{ device.last_seen.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </span>
+                    </p>
+                    <p class="mb-0 current-video" style="display: none;">
+                        <small class="text-muted">Now Playing:</small><br>
+                        <span class="video-name text-primary"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="notification-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-bell-fill me-2"></i>
+            <strong class="me-auto">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Notification message will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<style>
+    .device-card {
+        border-left: 4px solid #6c757d;
+        transition: all 0.3s ease;
+    }
+    
+    .device-card.online {
+        border-left-color: #28a745;
+    }
+    
+    .device-card.playing {
+        border-left-color: #007bff;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+    }
+    
+    .status-badge {
+        font-size: 0.75rem;
+    }
+    
+    #connection-status {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    #connection-status.connected {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    #connection-status.disconnected {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    #connection-status.connecting {
+        background-color: #ffc107;
+        color: black;
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const socket = io('/', {
+        transports: ['websocket', 'polling']
+    });
+    
+    const deviceCards = {};
+    let reconnectAttempts = 0;
+    
+    // Initialize device card references
+    document.querySelectorAll('[data-device-id]').forEach(card => {
+        const deviceId = card.getAttribute('data-device-id');
+        deviceCards[deviceId] = {
+            element: card,
+            card: card.querySelector('.device-card'),
+            statusBadge: card.querySelector('.status-badge'),
+            lastSeen: card.querySelector('.last-seen'),
+            currentVideo: card.querySelector('.current-video'),
+            videoName: card.querySelector('.video-name')
+        };
+    });
+    
+    // Connection status
+    socket.on('connect', () => {
+        console.log('Connected to WebSocket server');
+        updateConnectionStatus('connected');
+        reconnectAttempts = 0;
+        
+        // Join rooms for real-time updates
+        socket.emit('join', { room: 'devices' });
+        socket.emit('join', { room: 'monitoring' });
+        socket.emit('join', { room: 'dashboard' });
+        
+        // Request initial device status
+        socket.emit('request_device_status');
+    });
+    
+    // Handle initial device status update
+    socket.on('device_status_update', (data) => {
+        console.log('Initial device status:', data);
+        data.devices.forEach(device => {
+            updateDeviceCard(device.id, device);
+        });
+        updateStatistics();
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('Disconnected from WebSocket server');
+        updateConnectionStatus('disconnected');
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        reconnectAttempts++;
+        updateConnectionStatus('connecting');
+    });
+    
+    // Device status updates
+    socket.on('device_status_changed', (data) => {
+        console.log('Device status update:', data);
+        updateDeviceCard(data.device_id, data.data);
+        updateStatistics();
+    });
+    
+    // Device online/offline events
+    socket.on('device_online', (data) => {
+        console.log('Device online:', data);
+        showNotification(`${data.device_name} is now online`, 'success');
+        updateStatistics();
+    });
+    
+    socket.on('device_offline', (data) => {
+        console.log('Device offline:', data);
+        showNotification(`${data.device_name} went offline`, 'warning');
+        updateStatistics();
+    });
+    
+    // Playback events
+    socket.on('playback_started', (data) => {
+        console.log('Playback started:', data);
+        updateDevicePlayback(data.device_id, {video_name: data.video_title});
+        showNotification(`${data.device_name} started playing: ${data.video_title}`, 'info');
+    });
+    
+    socket.on('playback_stopped', (data) => {
+        console.log('Playback stopped:', data);
+        updateDevicePlayback(data.device_id, {video_name: null});
+    });
+    
+    // Command completion notifications
+    socket.on('command_completed', (data) => {
+        console.log('Command completed:', data);
+        const status = data.status === 'success' ? 'success' : 'error';
+        showNotification(`${data.device_name}: ${data.command_type} ${data.status}`, status);
+    });
+    
+    // Alerts
+    socket.on('alert', (data) => {
+        console.log('Alert:', data);
+        showNotification(data.message, data.severity);
+    });
+    
+    function updateConnectionStatus(status) {
+        const badge = document.getElementById('connection-status');
+        badge.className = 'badge ' + status;
+        
+        if (status === 'connected') {
+            badge.innerHTML = '<i class="bi bi-circle-fill"></i> Connected';
+        } else if (status === 'disconnected') {
+            badge.innerHTML = '<i class="bi bi-circle-fill"></i> Disconnected';
+        } else {
+            badge.innerHTML = '<i class="bi bi-circle-fill"></i> Connecting...';
+        }
+    }
+    
+    function updateDeviceCard(deviceId, data) {
+        const device = deviceCards[deviceId];
+        if (!device) return;
+        
+        const isOnline = data.is_online || data.status === 'online';
+        
+        // Update status badge
+        if (isOnline) {
+            device.statusBadge.className = 'badge bg-success status-badge';
+            device.statusBadge.textContent = 'Online';
+            device.card.classList.add('online');
+        } else {
+            device.statusBadge.className = 'badge bg-secondary status-badge';
+            device.statusBadge.textContent = 'Offline';
+            device.card.classList.remove('online', 'playing');
+        }
+        
+        // Update last seen
+        if (data.last_seen) {
+            const lastSeen = new Date(data.last_seen);
+            device.lastSeen.textContent = lastSeen.toLocaleString();
+        }
+    }
+    
+    function updateDevicePlayback(deviceId, data) {
+        const device = deviceCards[deviceId];
+        if (!device) return;
+        
+        if (data.video_name) {
+            device.currentVideo.style.display = 'block';
+            device.videoName.textContent = data.video_name;
+            device.card.classList.add('playing');
+        } else {
+            device.currentVideo.style.display = 'none';
+            device.card.classList.remove('playing');
+        }
+    }
+    
+    function updateStatistics() {
+        let online = 0;
+        let playing = 0;
+        let offline = 0;
+        
+        Object.values(deviceCards).forEach(device => {
+            if (device.card.classList.contains('online')) {
+                online++;
+                if (device.card.classList.contains('playing')) {
+                    playing++;
+                }
+            } else {
+                offline++;
+            }
+        });
+        
+        document.getElementById('online-devices').textContent = online;
+        document.getElementById('playing-devices').textContent = playing;
+        document.getElementById('offline-devices').textContent = offline;
+    }
+    
+    function showNotification(message, category = 'info') {
+        const toast = document.getElementById('notification-toast');
+        const toastBody = toast.querySelector('.toast-body');
+        
+        // Set message
+        toastBody.textContent = message;
+        
+        // Set color based on category
+        const toastHeader = toast.querySelector('.toast-header');
+        toastHeader.className = 'toast-header';
+        if (category === 'success') {
+            toastHeader.classList.add('bg-success', 'text-white');
+        } else if (category === 'warning') {
+            toastHeader.classList.add('bg-warning');
+        } else if (category === 'error') {
+            toastHeader.classList.add('bg-danger', 'text-white');
+        }
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+    }
+    
+    // Initial statistics update
+    updateStatistics();
+</script>
+{% endblock %}

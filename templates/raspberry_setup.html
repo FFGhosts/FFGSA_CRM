@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Setup - FFGSA_CSM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 0;
+        }
+        .setup-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .setup-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header-section h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .header-section .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .content-section {
+            padding: 40px;
+        }
+        .step-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 15px;
+        }
+        .command-box {
+            background: #2d3748;
+            color: #68d391;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            position: relative;
+            margin: 20px 0;
+        }
+        .command-box code {
+            color: #68d391;
+            word-break: break-all;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .copy-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .copy-btn.copied {
+            background: #48bb78;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        .feature-list i {
+            color: #48bb78;
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        .alert-info-custom {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .requirement-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .requirement-item i {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .btn-download {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+            border: none;
+        }
+        .btn-download:hover {
+            background: #5568d3;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-card">
+            <!-- Header -->
+            <div class="header-section">
+                <i class="bi bi-raspberry-pi" style="font-size: 4rem; margin-bottom: 20px;"></i>
+                <h1>Raspberry Pi Setup</h1>
+                <p class="subtitle">One-Step Installation for FFGSA_CSM Player</p>
+            </div>
+
+            <!-- Content -->
+            <div class="content-section">
+                <!-- What It Does -->
+                <h3 class="mb-3"><i class="bi bi-info-circle text-primary"></i> What This Does</h3>
+                <ul class="feature-list mb-4">
+                    <li><i class="bi bi-check-circle-fill"></i> Installs all required software automatically</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Downloads and configures the video player</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Registers your device with the server</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Sets up automatic startup on boot</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Optimizes display for digital signage</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Starts playing content immediately</li>
+                </ul>
+
+                <!-- Requirements -->
+                <h3 class="mb-3"><i class="bi bi-clipboard-check text-primary"></i> Requirements</h3>
+                <div class="requirements-grid mb-4">
+                    <div class="requirement-item">
+                        <i class="bi bi-cpu"></i>
+                        <div><strong>Raspberry Pi</strong></div>
+                        <small class="text-muted">3B+ or newer</small>
+                    </div>
+                    <div class="requirement-item">
+                        <i class="bi bi-disc"></i>
+                        <div><strong>Raspberry Pi OS</strong></div>
+                        <small class="text-muted">Bullseye or newer</small>
+                    </div>
+                    <div class="requirement-item">
+                        <i class="bi bi-wifi"></i>
+                        <div><strong>Network</strong></div>
+                        <small class="text-muted">WiFi or Ethernet</small>
+                    </div>
+                    <div class="requirement-item">
+                        <i class="bi bi-display"></i>
+                        <div><strong>Display</strong></div>
+                        <small class="text-muted">HDMI connected</small>
+                    </div>
+                </div>
+
+                <!-- Installation Steps -->
+                <h3 class="mb-3"><i class="bi bi-list-ol text-primary"></i> Installation Steps</h3>
+
+                <div class="step-card">
+                    <div class="d-flex align-items-start">
+                        <span class="step-number">1</span>
+                        <div>
+                            <h5>Open Terminal on Your Raspberry Pi</h5>
+                            <p class="text-muted mb-0">Click the terminal icon in the menu bar or press <kbd>Ctrl+Alt+T</kbd></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <div class="d-flex align-items-start">
+                        <span class="step-number">2</span>
+                        <div>
+                            <h5>Run the Installation Command</h5>
+                            <p class="text-muted">Copy and paste this command into the terminal:</p>
+                            <div class="command-box">
+                                <button class="copy-btn" onclick="copyCommand()">
+                                    <i class="bi bi-clipboard"></i> Copy
+                                </button>
+                                <code id="install-command">curl -sL http://{{ server_host }}/static/client/install.sh | bash</code>
+                            </div>
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                <strong>Note:</strong> The command above is customized for your server. Make sure your Raspberry Pi can reach <strong>{{ server_host }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <div class="d-flex align-items-start">
+                        <span class="step-number">3</span>
+                        <div>
+                            <h5>Answer the Prompts</h5>
+                            <p class="text-muted mb-0">The installer will ask for:</p>
+                            <ul class="mt-2 mb-0">
+                                <li><strong>Server URL:</strong> Pre-filled with <code>http://{{ server_host }}</code></li>
+                                <li><strong>Device Name:</strong> Press Enter to use hostname, or type a custom name</li>
+                                <li><strong>Device Serial:</strong> Press Enter to auto-detect</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <div class="d-flex align-items-start">
+                        <span class="step-number">4</span>
+                        <div>
+                            <h5>Wait for Installation</h5>
+                            <p class="text-muted mb-0">Takes 2-5 minutes. The installer will show progress for each step.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <div class="d-flex align-items-start">
+                        <span class="step-number">5</span>
+                        <div>
+                            <h5>Assign Content</h5>
+                            <p class="text-muted mb-0">Go to <a href="/devices" target="_blank">Devices</a> page and assign videos or playlists to your new device.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alternative Download -->
+                <div class="alert-info-custom">
+                    <h5><i class="bi bi-download"></i> Alternative: Download Script</h5>
+                    <p>If you prefer to download and inspect the script first:</p>
+                    <a href="/static/client/install.sh" class="btn-download" download>
+                        <i class="bi bi-download"></i> Download install.sh
+                    </a>
+                    <p class="mt-3 mb-0">Then run on your Raspberry Pi:</p>
+                    <div class="command-box mt-2" style="margin-bottom: 0;">
+                        <code>chmod +x install.sh && ./install.sh</code>
+                    </div>
+                </div>
+
+                <!-- What's Next -->
+                <h3 class="mb-3 mt-4"><i class="bi bi-arrow-right-circle text-primary"></i> What's Next?</h3>
+                <ul class="feature-list">
+                    <li><i class="bi bi-1-circle-fill text-primary"></i> Device will appear in <a href="/devices">Devices</a> page</li>
+                    <li><i class="bi bi-2-circle-fill text-primary"></i> Assign videos or playlists to start playback</li>
+                    <li><i class="bi bi-3-circle-fill text-primary"></i> Configure display rotation via <i class="bi bi-gear"></i> Configure button</li>
+                    <li><i class="bi bi-4-circle-fill text-primary"></i> Monitor status on <a href="/monitoring">Real-time Dashboard</a></li>
+                </ul>
+
+                <!-- Help -->
+                <div class="alert alert-secondary mt-4">
+                    <h5><i class="bi bi-question-circle"></i> Need Help?</h5>
+                    <ul class="mb-0">
+                        <li>View detailed guide: <a href="/static/client/RASPBERRY_PI_QUICKSTART.md" target="_blank">Quick Start Guide</a></li>
+                        <li>Check device logs: <code>tail -f /home/pi/FFGSA_CSM/logs/player.log</code></li>
+                        <li>Service status: <code>sudo systemctl status FFGSA_CSM-player</code></li>
+                    </ul>
+                </div>
+
+                <!-- Back Button -->
+                <div class="text-center mt-4">
+                    <a href="/devices" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-arrow-left"></i> Back to Devices
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyCommand() {
+            const command = document.getElementById('install-command').textContent;
+            navigator.clipboard.writeText(command).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+                btn.classList.add('copied');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
+

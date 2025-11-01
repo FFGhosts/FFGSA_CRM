@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Schedule - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-calendar-plus"></i> Create Schedule
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.create_schedule') }}" id="scheduleForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Device Selection -->
+                        <div class="mb-3">
+                            {{ form.device_id.label(class="form-label") }}
+                            {{ form.device_id(class="form-select" + (" is-invalid" if form.device_id.errors else "")) }}
+                            {% if form.device_id.errors %}
+                                <div class="invalid-feedback">{{ form.device_id.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Content Type and Content Selection -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.content_type.label(class="form-label") }}
+                                {{ form.content_type(class="form-select" + (" is-invalid" if form.content_type.errors else ""), 
+                                    id="contentTypeSelect") }}
+                                {% if form.content_type.errors %}
+                                    <div class="invalid-feedback">{{ form.content_type.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.content_id.label(class="form-label") }}
+                                <select name="content_id" id="contentSelect" class="form-select" required>
+                                    <option value="">Select content type first...</option>
+                                </select>
+                                {% if form.content_id.errors %}
+                                    <div class="invalid-feedback">{{ form.content_id.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Time Range -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.start_time.label(class="form-label") }}
+                                {{ form.start_time(class="form-control" + (" is-invalid" if form.start_time.errors else "")) }}
+                                {% if form.start_time.errors %}
+                                    <div class="invalid-feedback">{{ form.start_time.errors[0] }}</div>
+                                {% endif %}
+                                <small class="text-muted">Format: HH:MM (24-hour)</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.end_time.label(class="form-label") }}
+                                {{ form.end_time(class="form-control" + (" is-invalid" if form.end_time.errors else "")) }}
+                                {% if form.end_time.errors %}
+                                    <div class="invalid-feedback">{{ form.end_time.errors[0] }}</div>
+                                {% endif %}
+                                <small class="text-muted">Format: HH:MM (24-hour)</small>
+                            </div>
+                        </div>
+
+                        <!-- Date Range (Optional) -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.start_date.label(class="form-label") }}
+                                {{ form.start_date(class="form-control" + (" is-invalid" if form.start_date.errors else ""), 
+                                    type="date") }}
+                                {% if form.start_date.errors %}
+                                    <div class="invalid-feedback">{{ form.start_date.errors[0] }}</div>
+                                {% endif %}
+                                <small class="text-muted">Leave empty for any date</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.end_date.label(class="form-label") }}
+                                {{ form.end_date(class="form-control" + (" is-invalid" if form.end_date.errors else ""), 
+                                    type="date") }}
+                                {% if form.end_date.errors %}
+                                    <div class="invalid-feedback">{{ form.end_date.errors[0] }}</div>
+                                {% endif %}
+                                <small class="text-muted">For seasonal content</small>
+                            </div>
+                        </div>
+
+                        <!-- Days of Week -->
+                        <div class="mb-3">
+                            {{ form.days_of_week.label(class="form-label") }}
+                            <div class="row">
+                                {% for value, label in form.days_of_week.choices %}
+                                <div class="col-md-3 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="days_of_week" value="{{ value }}" 
+                                               id="day_{{ value }}"
+                                               {% if form.days_of_week.data and value in form.days_of_week.data %}checked{% endif %}>
+                                        <label class="form-check-label" for="day_{{ value }}">
+                                            {{ label }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted">Leave empty for all days</small>
+                        </div>
+
+                        <!-- Priority -->
+                        <div class="mb-3">
+                            {{ form.priority.label(class="form-label") }}
+                            <div class="row align-items-center">
+                                <div class="col-md-10">
+                                    <input type="range" class="form-range" name="priority" 
+                                           min="1" max="10" value="{{ form.priority.data }}" 
+                                           id="priorityRange" oninput="priorityValue.value = this.value">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" id="priorityValue" 
+                                           value="{{ form.priority.data }}" readonly>
+                                </div>
+                            </div>
+                            <small class="text-muted">Higher priority wins when schedules conflict (1-10)</small>
+                            {% if form.priority.errors %}
+                                <div class="text-danger">{{ form.priority.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Recurrence -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.recurrence_type.label(class="form-label") }}
+                                {{ form.recurrence_type(class="form-select" + (" is-invalid" if form.recurrence_type.errors else ""), 
+                                    onchange="toggleRecurrenceFields()") }}
+                                {% if form.recurrence_type.errors %}
+                                    <div class="invalid-feedback">{{ form.recurrence_type.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3" id="recurrenceIntervalDiv">
+                                {{ form.recurrence_interval.label(class="form-label") }}
+                                {{ form.recurrence_interval(class="form-control" + (" is-invalid" if form.recurrence_interval.errors else "")) }}
+                                {% if form.recurrence_interval.errors %}
+                                    <div class="invalid-feedback">{{ form.recurrence_interval.errors[0] }}</div>
+                                {% endif %}
+                                <small class="text-muted">E.g., "2" for every 2 days/weeks/months</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="recurrenceEndDiv">
+                            {{ form.recurrence_end_date.label(class="form-label") }}
+                            {{ form.recurrence_end_date(class="form-control" + (" is-invalid" if form.recurrence_end_date.errors else ""), 
+                                type="date") }}
+                            {% if form.recurrence_end_date.errors %}
+                                <div class="invalid-feedback">{{ form.recurrence_end_date.errors[0] }}</div>
+                            {% endif %}
+                            <small class="text-muted">When to stop recurring</small>
+                        </div>
+
+                        <!-- Active Status -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active(class="form-check-input") }}
+                                {{ form.is_active.label(class="form-check-label") }}
+                            </div>
+                            <small class="text-muted">Disable to pause schedule without deleting</small>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin.schedules') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-question-circle"></i> Scheduling Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Time Range:</strong> Content will play during these hours (e.g., 9:00 AM - 5:00 PM)</li>
+                        <li><strong>Days of Week:</strong> Select specific days or leave empty for all days</li>
+                        <li><strong>Date Range:</strong> Perfect for seasonal or holiday content</li>
+                        <li><strong>Priority:</strong> When schedules overlap, higher priority wins</li>
+                        <li><strong>Recurrence:</strong> Set up repeating schedules (daily/weekly/monthly)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleRecurrenceFields() {
+    const recurrenceType = document.querySelector('select[name="recurrence_type"]').value;
+    const intervalDiv = document.getElementById('recurrenceIntervalDiv');
+    const endDiv = document.getElementById('recurrenceEndDiv');
+    
+    if (recurrenceType === 'NONE') {
+        intervalDiv.style.display = 'none';
+        endDiv.style.display = 'none';
+    } else {
+        intervalDiv.style.display = 'block';
+        endDiv.style.display = 'block';
+    }
+}
+
+function loadContent() {
+    const contentType = document.getElementById('contentTypeSelect').value;
+    const contentSelect = document.getElementById('contentSelect');
+    
+    if (!contentType) {
+        contentSelect.innerHTML = '<option value="">Select content type first...</option>';
+        return;
+    }
+    
+    // Show loading state
+    contentSelect.innerHTML = '<option value="">Loading...</option>';
+    contentSelect.disabled = true;
+    
+    // Fetch content based on type
+    const endpoint = contentType === 'video' ? '/api/videos' : '/api/playlists';
+    
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            contentSelect.innerHTML = '<option value="">-- Select --</option>';
+            
+            if (contentType === 'video') {
+                data.videos.forEach(video => {
+                    const option = document.createElement('option');
+                    option.value = video.id;
+                    option.textContent = video.title;
+                    contentSelect.appendChild(option);
+                });
+            } else {
+                data.playlists.forEach(playlist => {
+                    const option = document.createElement('option');
+                    option.value = playlist.id;
+                    option.textContent = playlist.name;
+                    contentSelect.appendChild(option);
+                });
+            }
+            
+            contentSelect.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error loading content:', error);
+            contentSelect.innerHTML = '<option value="">Error loading content</option>';
+            contentSelect.disabled = false;
+        });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleRecurrenceFields();
+    
+    // Load content when type changes
+    document.getElementById('contentTypeSelect').addEventListener('change', loadContent);
+    
+    // Load content on page load if type is selected
+    if (document.getElementById('contentTypeSelect').value) {
+        loadContent();
+    }
+});
+</script>
+{% endblock %}
+

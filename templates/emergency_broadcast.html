@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Broadcast - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="fas fa-broadcast-tower text-danger"></i> Emergency Broadcast System</h1>
+            <p class="text-muted">Send urgent messages and override content on devices</p>
+        </div>
+    </div>
+
+    <!-- Active Broadcasts -->
+    {% if active_broadcasts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Active Broadcasts</h5>
+                </div>
+                <div class="card-body">
+                    {% for broadcast in active_broadcasts %}
+                    <div class="alert alert-warning mb-3" role="alert">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="alert-heading">
+                                    <span class="badge badge-danger">Priority {{ broadcast.priority }}</span>
+                                    {{ broadcast.title }}
+                                </h5>
+                                <p class="mb-1">{{ broadcast.message }}</p>
+                                <small class="text-muted">
+                                    Started: {{ broadcast.start_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% if broadcast.end_time %}
+                                    | Ends: {{ broadcast.end_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <button class="btn btn-sm btn-danger" onclick="cancelBroadcast({{ broadcast.id }})">
+                                <i class="fas fa-stop"></i> Cancel
+                            </button>
+                        </div>
+                        <div class="mt-2">
+                            <small>
+                                Targets: 
+                                {% if broadcast.target_all_devices %}
+                                <span class="badge badge-info">All Devices</span>
+                                {% elif broadcast.target_device_group_id %}
+                                <span class="badge badge-info">Device Group</span>
+                                {% else %}
+                                <span class="badge badge-info">Specific Devices</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Create New Broadcast -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Create Emergency Broadcast</h5>
+                </div>
+                <div class="card-body">
+                    <form id="broadcastForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="title">Broadcast Title <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="title" name="title" required 
+                                           placeholder="e.g., Emergency Alert">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="priority">Priority <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="priority" name="priority" required>
+                                        <option value="1">1 - Low</option>
+                                        <option value="2">2 - Medium</option>
+                                        <option value="3" selected>3 - High</option>
+                                        <option value="4">4 - Urgent</option>
+                                        <option value="5">5 - Critical</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="duration">Duration (seconds)</label>
+                                    <input type="number" class="form-control" id="duration" name="duration" 
+                                           placeholder="Leave blank for indefinite">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="message">Message <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="message" name="message" rows="3" required
+                                      placeholder="Enter the emergency message to display on devices"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="video_id">Video (Optional)</label>
+                            <select class="form-control" id="video_id" name="video_id">
+                                <option value="">Text Message Only</option>
+                                {% for video in videos %}
+                                <option value="{{ video.id }}">{{ video.title }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Select a video to play instead of displaying text</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Target Devices <span class="text-danger">*</span></label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="target_type" id="target_all" 
+                                       value="all" checked onchange="updateTargetOptions()">
+                                <label class="form-check-label" for="target_all">
+                                    All Active Devices
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="target_type" id="target_group" 
+                                       value="group" onchange="updateTargetOptions()">
+                                <label class="form-check-label" for="target_group">
+                                    Device Group
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="target_type" id="target_specific" 
+                                       value="specific" onchange="updateTargetOptions()">
+                                <label class="form-check-label" for="target_specific">
+                                    Specific Devices
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="groupSelect" class="form-group" style="display:none;">
+                            <label for="device_group">Select Device Group</label>
+                            <select class="form-control" id="device_group" name="device_group">
+                                <option value="">Choose a group...</option>
+                                {% for group in device_groups %}
+                                <option value="{{ group.id }}">{{ group.name }} ({{ group.devices|length }} devices)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div id="deviceSelect" class="form-group" style="display:none;">
+                            <label>Select Devices</label>
+                            <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                {% for device in devices %}
+                                <div class="form-check">
+                                    <input class="form-check-input device-checkbox" type="checkbox" 
+                                           id="device_{{ device.id }}" value="{{ device.id }}">
+                                    <label class="form-check-label" for="device_{{ device.id }}">
+                                        {{ device.name }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> Emergency broadcasts will override current playback on targeted devices.
+                            Devices will return to normal playback when the broadcast ends or is cancelled.
+                        </div>
+
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-broadcast-tower"></i> Send Emergency Broadcast
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Broadcasts -->
+    {% if recent_broadcasts %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Broadcasts</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Priority</th>
+                                    <th>Started</th>
+                                    <th>Ended</th>
+                                    <th>Status</th>
+                                    <th>Created By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for broadcast in recent_broadcasts %}
+                                <tr>
+                                    <td>{{ broadcast.title }}</td>
+                                    <td><span class="badge badge-secondary">{{ broadcast.priority }}</span></td>
+                                    <td>{{ broadcast.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if broadcast.end_time %}
+                                        {{ broadcast.end_time.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{% if broadcast.status == 'cancelled' %}warning{% else %}secondary{% endif %}">
+                                            {{ broadcast.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ broadcast.creator.username if broadcast.creator else 'System' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function updateTargetOptions() {
+    const targetType = document.querySelector('input[name="target_type"]:checked').value;
+    
+    document.getElementById('groupSelect').style.display = targetType === 'group' ? 'block' : 'none';
+    document.getElementById('deviceSelect').style.display = targetType === 'specific' ? 'block' : 'none';
+}
+
+document.getElementById('broadcastForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const targetType = document.querySelector('input[name="target_type"]:checked').value;
+    const formData = {
+        title: document.getElementById('title').value,
+        message: document.getElementById('message').value,
+        priority: parseInt(document.getElementById('priority').value),
+        video_id: document.getElementById('video_id').value || null,
+        duration: document.getElementById('duration').value ? parseInt(document.getElementById('duration').value) : null,
+        target_all_devices: targetType === 'all'
+    };
+    
+    if (targetType === 'group') {
+        formData.target_device_group_id = parseInt(document.getElementById('device_group').value);
+    } else if (targetType === 'specific') {
+        formData.device_ids = Array.from(document.querySelectorAll('.device-checkbox:checked'))
+            .map(cb => parseInt(cb.value));
+        
+        if (formData.device_ids.length === 0) {
+            alert('Please select at least one device');
+            return;
+        }
+    }
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch('/api/emergency-broadcast', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error sending broadcast: ' + error.message);
+    }
+});
+
+async function cancelBroadcast(broadcastId) {
+    if (!confirm('Are you sure you want to cancel this emergency broadcast?')) {
+        return;
+    }
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch(`/api/emergency-broadcast/${broadcastId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error cancelling broadcast: ' + error.message);
+    }
+}
+</script>
+{% endblock %}
+

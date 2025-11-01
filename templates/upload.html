@@ -1,0 +1,587 @@
+{% extends "base.html" %}
+
+{% block title %}Videos - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-film"></i> Videos</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="bi bi-upload"></i> Upload Video
+        </button>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('admin.videos') }}" class="row g-3">
+                <!-- Search Bar -->
+                <div class="col-md-4">
+                    <label class="form-label"><i class="bi bi-search"></i> Search</label>
+                    <input type="text" class="form-control" name="search" 
+                           value="{{ search }}" placeholder="Search videos...">
+                </div>
+                
+                <!-- Resolution Filter -->
+                <div class="col-md-2">
+                    <label class="form-label">Resolution</label>
+                    <select class="form-select" name="resolution">
+                        <option value="">All</option>
+                        <option value="4k" {% if resolution_filter == '4k' %}selected{% endif %}>4K</option>
+                        <option value="1080p" {% if resolution_filter == '1080p' %}selected{% endif %}>1080p</option>
+                        <option value="720p" {% if resolution_filter == '720p' %}selected{% endif %}>720p</option>
+                        <option value="sd" {% if resolution_filter == 'sd' %}selected{% endif %}>SD (< 720p)</option>
+                    </select>
+                </div>
+                
+                <!-- Size Filter -->
+                <div class="col-md-2">
+                    <label class="form-label">File Size</label>
+                    <select class="form-select" name="size">
+                        <option value="">All</option>
+                        <option value="large" {% if size_filter == 'large' %}selected{% endif %}>> 500 MB</option>
+                        <option value="medium" {% if size_filter == 'medium' %}selected{% endif %}>100-500 MB</option>
+                        <option value="small" {% if size_filter == 'small' %}selected{% endif %}>< 100 MB</option>
+                    </select>
+                </div>
+                
+                <!-- Date Filter -->
+                <div class="col-md-2">
+                    <label class="form-label">Date</label>
+                    <select class="form-select" name="date">
+                        <option value="">All Time</option>
+                        <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                        <option value="week" {% if date_filter == 'week' %}selected{% endif %}>This Week</option>
+                        <option value="month" {% if date_filter == 'month' %}selected{% endif %}>This Month</option>
+                    </select>
+                </div>
+                
+                <!-- Sort -->
+                <div class="col-md-2">
+                    <label class="form-label">Sort By</label>
+                    <select class="form-select" name="sort" onchange="this.form.submit()">
+                        <option value="uploaded_at" {% if sort_by == 'uploaded_at' %}selected{% endif %}>Date</option>
+                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+                        <option value="size" {% if sort_by == 'size' %}selected{% endif %}>Size</option>
+                        <option value="duration" {% if sort_by == 'duration' %}selected{% endif %}>Duration</option>
+                    </select>
+                    <input type="hidden" name="dir" value="{{ 'asc' if sort_dir == 'desc' else 'desc' }}">
+                </div>
+                
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel"></i> Apply Filters
+                    </button>
+                    <a href="{{ url_for('admin.videos') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </a>
+                    {% if search or resolution_filter or size_filter or date_filter %}
+                    <span class="text-muted ms-2">
+                        <i class="bi bi-info-circle"></i> Showing {{ videos.total }} result(s)
+                    </span>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Videos Table -->
+    <div class="card">
+        <div class="card-body">
+            {% if videos.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Preview</th>
+                            <th>
+                                <a href="{{ url_for('admin.videos', sort='title', dir=('asc' if sort_by == 'title' and sort_dir == 'desc' else 'desc'), search=search, resolution=resolution_filter, size=size_filter, date=date_filter) }}" 
+                                   class="text-decoration-none text-dark">
+                                    Title
+                                    {% if sort_by == 'title' %}
+                                        <i class="bi bi-arrow-{{ 'down' if sort_dir == 'desc' else 'up' }}"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>Details</th>
+                            <th>
+                                <a href="{{ url_for('admin.videos', sort='size', dir=('asc' if sort_by == 'size' and sort_dir == 'desc' else 'desc'), search=search, resolution=resolution_filter, size=size_filter, date=date_filter) }}" 
+                                   class="text-decoration-none text-dark">
+                                    Size
+                                    {% if sort_by == 'size' %}
+                                        <i class="bi bi-arrow-{{ 'down' if sort_dir == 'desc' else 'up' }}"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="{{ url_for('admin.videos', sort='uploaded_at', dir=('asc' if sort_by == 'uploaded_at' and sort_dir == 'desc' else 'desc'), search=search, resolution=resolution_filter, size=size_filter, date=date_filter) }}" 
+                                   class="text-decoration-none text-dark">
+                                    Uploaded
+                                    {% if sort_by == 'uploaded_at' %}
+                                        <i class="bi bi-arrow-{{ 'down' if sort_dir == 'desc' else 'up' }}"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for video in videos.items %}
+                        <tr>
+                            <td>
+                                {% if video.has_thumbnail %}
+                                <img src="{{ url_for('admin.serve_thumbnail', filename=video.filename.rsplit('.', 1)[0] + '.jpg') }}" 
+                                     alt="{{ video.title }}" 
+                                     class="img-thumbnail" 
+                                     style="width: 120px; height: auto;">
+                                {% else %}
+                                <div class="text-center text-muted" style="width: 120px;">
+                                    <i class="bi bi-film" style="font-size: 3rem;"></i>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ video.title }}</strong>
+                                <br><small class="text-muted"><code>{{ video.filename }}</code></small>
+                                {% if video.tags %}
+                                <br>
+                                {% for tag in video.tags %}
+                                <span class="badge" style="background-color: {{ tag.color }};">
+                                    <i class="bi bi-tag-fill"></i> {{ tag.name }}
+                                </span>
+                                {% endfor %}
+                                {% endif %}
+                                {% if video.categories %}
+                                <br>
+                                {% for category in video.categories %}
+                                <span class="badge" style="background-color: {{ category.color }};">
+                                    {% if category.icon %}<i class="bi bi-{{ category.icon }}"></i>{% endif %}
+                                    {{ category.name }}
+                                </span>
+                                {% endfor %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>
+                                    {% if video.width and video.height %}
+                                    <i class="bi bi-aspect-ratio"></i> {{ video.width }}x{{ video.height }}<br>
+                                    {% endif %}
+                                    {% if video.duration %}
+                                    <i class="bi bi-clock"></i> {{ video.formatted_duration }}<br>
+                                    {% endif %}
+                                    {% if video.codec %}
+                                    <i class="bi bi-file-earmark-code"></i> {{ video.codec|upper }}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>{{ video.formatted_size }}</td>
+                            <td>{{ video.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-danger" 
+                                        onclick="confirmDelete({{ video.id }}, '{{ video.title }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if videos.pages > 1 %}
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if videos.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.videos', page=videos.prev_num, search=search, resolution=resolution_filter, size=size_filter, date=date_filter, sort=sort_by, dir=sort_dir) }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in videos.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == videos.page %}
+                            <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                            {% else %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('admin.videos', page=page_num, search=search, resolution=resolution_filter, size=size_filter, date=date_filter, sort=sort_by, dir=sort_dir) }}">{{ page_num }}</a></li>
+                            {% endif %}
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if videos.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.videos', page=videos.next_num, search=search, resolution=resolution_filter, size=size_filter, date=date_filter, sort=sort_by, dir=sort_dir) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-film display-1 text-muted"></i>
+                <p class="lead text-muted mt-3">No videos uploaded yet.</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                    <i class="bi bi-upload"></i> Upload Your First Video
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-upload"></i> Upload Video</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" id="closeModalBtn"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- File Selection Area -->
+                    <div id="fileSelectArea">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title (Optional)</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   placeholder="Leave blank to use filename">
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="3" placeholder="Enter video description"></textarea>
+                        </div>
+                        
+                        {% if all_tags %}
+                        <div class="mb-3">
+                            <label for="tags" class="form-label"><i class="bi bi-tags"></i> Tags (Optional)</label>
+                            <select class="form-select" id="tags" name="tags" multiple size="4">
+                                {% for tag in all_tags %}
+                                <option value="{{ tag.id }}" style="background-color: {{ tag.color }}22;">
+                                    {{ tag.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple tags</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if all_categories %}
+                        <div class="mb-3">
+                            <label for="categories" class="form-label"><i class="bi bi-folder"></i> Categories (Optional)</label>
+                            <select class="form-select" id="categories" name="categories" multiple size="4">
+                                {% for category in all_categories %}
+                                <option value="{{ category.id }}" style="background-color: {{ category.color }}22;">
+                                    {% if category.icon %}<i class="bi bi-{{ category.icon }}"></i>{% endif %}
+                                    {{ category.full_path }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple categories</div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="video" class="form-label">Video File</label>
+                            <input type="file" class="form-control" id="video" name="video" 
+                                   accept="video/*" required>
+                            <div class="form-text">
+                                Supported formats: MP4, AVI, MKV, MOV, WMV, FLV, WebM (Max: 500MB)
+                            </div>
+                        </div>
+                        <div id="fileInfo" class="alert alert-info d-none mt-3">
+                            <strong>Selected:</strong> <span id="fileName"></span><br>
+                            <strong>Size:</strong> <span id="fileSize"></span>
+                        </div>
+                    </div>
+
+                    <!-- Upload Progress Area (Hidden initially) -->
+                    <div id="uploadProgressArea" class="d-none">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-cloud-upload display-4 text-primary"></i>
+                            <h5 class="mt-2">Uploading Video...</h5>
+                            <p class="text-muted mb-1"><span id="uploadFileName"></span></p>
+                            <small class="text-muted"><span id="uploadStatus">Preparing upload...</span></small>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="progress mb-3" style="height: 30px;">
+                            <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%">
+                                <span id="uploadPercentage">0%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Stats -->
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span><i class="bi bi-speedometer2"></i> <span id="uploadSpeed">0 MB/s</span></span>
+                            <span><i class="bi bi-clock"></i> <span id="uploadTime">Calculating...</span></span>
+                            <span><i class="bi bi-hdd"></i> <span id="uploadedSize">0 MB / 0 MB</span></span>
+                        </div>
+
+                        <!-- Processing Status (After upload) -->
+                        <div id="processingStatus" class="d-none mt-4">
+                            <div class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <div>
+                                        <strong>Processing video...</strong><br>
+                                        <small>Extracting metadata and generating thumbnail</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Success/Error Messages -->
+                        <div id="uploadResult" class="d-none"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="uploadBtn">
+                        <i class="bi bi-upload"></i> Upload
+                    </button>
+                    <button type="button" class="btn btn-success d-none" id="doneBtn" onclick="window.location.reload()">
+                        <i class="bi bi-check-circle"></i> Done
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Form (Hidden) -->
+<form id="deleteForm" method="POST" style="display: none;">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Delete confirmation
+function confirmDelete(videoId, videoTitle) {
+    if (confirm(`Are you sure you want to delete "${videoTitle}"? This action cannot be undone.`)) {
+        const form = document.getElementById('deleteForm');
+        form.action = `/videos/delete/${videoId}`;
+        form.submit();
+    }
+}
+
+// File selection handler
+document.getElementById('video').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.classList.remove('d-none');
+        
+        // Auto-fill title if empty
+        const titleInput = document.getElementById('title');
+        if (!titleInput.value) {
+            titleInput.value = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+        }
+    }
+});
+
+// AJAX Upload with Progress
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const fileInput = document.getElementById('video');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a video file');
+        return;
+    }
+    
+    // Validate file size (500MB max)
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert('File size exceeds 500MB limit');
+        return;
+    }
+    
+    // Prepare FormData
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('title', document.getElementById('title').value);
+    formData.append('description', document.getElementById('description').value);
+    
+    // Add tags (if any selected)
+    const tagSelect = document.getElementById('tags');
+    if (tagSelect) {
+        Array.from(tagSelect.selectedOptions).forEach(option => {
+            formData.append('tags', option.value);
+        });
+    }
+    
+    // Add categories (if any selected)
+    const categorySelect = document.getElementById('categories');
+    if (categorySelect) {
+        Array.from(categorySelect.selectedOptions).forEach(option => {
+            formData.append('categories', option.value);
+        });
+    }
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    formData.append('csrf_token', csrfToken);
+    
+    // Show progress area, hide file selection
+    document.getElementById('fileSelectArea').classList.add('d-none');
+    document.getElementById('uploadProgressArea').classList.remove('d-none');
+    document.getElementById('uploadBtn').classList.add('d-none');
+    document.getElementById('closeModalBtn').disabled = true;
+    document.getElementById('cancelBtn').disabled = true;
+    
+    // Set upload file name
+    document.getElementById('uploadFileName').textContent = file.name;
+    
+    // Create XMLHttpRequest for progress tracking
+    const xhr = new XMLHttpRequest();
+    const startTime = Date.now();
+    
+    // Upload progress handler
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            const progressBar = document.getElementById('uploadProgressBar');
+            const percentage = document.getElementById('uploadPercentage');
+            
+            progressBar.style.width = percentComplete + '%';
+            percentage.textContent = Math.round(percentComplete) + '%';
+            
+            // Update uploaded size
+            document.getElementById('uploadedSize').textContent = 
+                formatFileSize(e.loaded) + ' / ' + formatFileSize(e.total);
+            
+            // Calculate upload speed
+            const elapsed = (Date.now() - startTime) / 1000; // seconds
+            const speed = e.loaded / elapsed; // bytes per second
+            document.getElementById('uploadSpeed').textContent = formatFileSize(speed) + '/s';
+            
+            // Calculate remaining time
+            const remaining = (e.total - e.loaded) / speed;
+            document.getElementById('uploadTime').textContent = formatTime(remaining);
+            
+            // Update status
+            if (percentComplete < 100) {
+                document.getElementById('uploadStatus').textContent = 'Uploading to server...';
+            }
+        }
+    });
+    
+    // Upload complete handler
+    xhr.upload.addEventListener('load', function() {
+        document.getElementById('uploadStatus').textContent = 'Upload complete!';
+        document.getElementById('processingStatus').classList.remove('d-none');
+    });
+    
+    // Response handler
+    xhr.addEventListener('load', function() {
+        const resultDiv = document.getElementById('uploadResult');
+        
+        if (xhr.status === 200 || xhr.status === 302) {
+            // Success
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <strong>Success!</strong> Video uploaded and processed successfully.
+                    ${document.getElementById('processingStatus').classList.contains('d-none') ? '' : '<br><small>Metadata extracted and thumbnail generated.</small>'}
+                </div>
+            `;
+            resultDiv.classList.remove('d-none');
+            document.getElementById('processingStatus').classList.add('d-none');
+            document.getElementById('uploadProgressBar').classList.remove('progress-bar-animated');
+            document.getElementById('uploadProgressBar').classList.add('bg-success');
+            document.getElementById('cancelBtn').classList.add('d-none');
+            document.getElementById('doneBtn').classList.remove('d-none');
+        } else {
+            // Error
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>Error!</strong> Upload failed. Please try again.
+                    <br><small>${xhr.statusText || 'Unknown error'}</small>
+                </div>
+            `;
+            resultDiv.classList.remove('d-none');
+            document.getElementById('processingStatus').classList.add('d-none');
+            document.getElementById('uploadProgressBar').classList.add('bg-danger');
+            document.getElementById('cancelBtn').disabled = false;
+            document.getElementById('closeModalBtn').disabled = false;
+        }
+    });
+    
+    // Error handler
+    xhr.addEventListener('error', function() {
+        const resultDiv = document.getElementById('uploadResult');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <strong>Error!</strong> Network error. Please check your connection and try again.
+            </div>
+        `;
+        resultDiv.classList.remove('d-none');
+        document.getElementById('processingStatus').classList.add('d-none');
+        document.getElementById('uploadProgressBar').classList.add('bg-danger');
+        document.getElementById('cancelBtn').disabled = false;
+        document.getElementById('closeModalBtn').disabled = false;
+    });
+    
+    // Send request
+    xhr.open('POST', '{{ url_for("admin.upload_video") }}', true);
+    // Note: CSRF handled by Flask-WTF exemption for this route or we need to add token
+    xhr.send(formData);
+});
+
+// Reset modal on close
+document.getElementById('uploadModal').addEventListener('hidden.bs.modal', function() {
+    // Only reload if upload was successful
+    if (!document.getElementById('doneBtn').classList.contains('d-none')) {
+        window.location.reload();
+    } else {
+        // Reset form
+        document.getElementById('uploadForm').reset();
+        document.getElementById('fileSelectArea').classList.remove('d-none');
+        document.getElementById('uploadProgressArea').classList.add('d-none');
+        document.getElementById('fileInfo').classList.add('d-none');
+        document.getElementById('uploadBtn').classList.remove('d-none');
+        document.getElementById('doneBtn').classList.add('d-none');
+        document.getElementById('cancelBtn').classList.remove('d-none');
+        document.getElementById('closeModalBtn').disabled = false;
+        document.getElementById('cancelBtn').disabled = false;
+        document.getElementById('processingStatus').classList.add('d-none');
+        document.getElementById('uploadResult').classList.add('d-none');
+        document.getElementById('uploadProgressBar').style.width = '0%';
+        document.getElementById('uploadProgressBar').classList.remove('bg-success', 'bg-danger');
+        document.getElementById('uploadProgressBar').classList.add('progress-bar-animated');
+    }
+});
+
+// Utility: Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Utility: Format time
+function formatTime(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return 'Calculating...';
+    if (seconds < 60) return Math.round(seconds) + 's';
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return minutes + 'm ' + secs + 's';
+}
+</script>
+{% endblock %}
+

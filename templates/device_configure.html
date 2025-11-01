@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}Configure {{ device.name }} - FFGSA_CSM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="fas fa-cog"></i> Configure {{ device.name }}</h1>
+            <p class="text-muted">Manage display, audio, and network settings for this device</p>
+            <a href="{{ url_for('admin.devices') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Devices
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Display Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-desktop"></i> Display Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="displayForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="resolution_width">Resolution Width</label>
+                                    <input type="number" class="form-control" id="resolution_width" 
+                                           value="{{ display.resolution_width if display else 1920 }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="resolution_height">Resolution Height</label>
+                                    <input type="number" class="form-control" id="resolution_height" 
+                                           value="{{ display.resolution_height if display else 1080 }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="rotation">Screen Rotation</label>
+                            <select class="form-control" id="rotation">
+                                <option value="0" {% if display and display.rotation == 0 %}selected{% endif %}>0° (Normal)</option>
+                                <option value="90" {% if display and display.rotation == 90 %}selected{% endif %}>90° (Clockwise)</option>
+                                <option value="180" {% if display and display.rotation == 180 %}selected{% endif %}>180° (Upside Down)</option>
+                                <option value="270" {% if display and display.rotation == 270 %}selected{% endif %}>270° (Counter-Clockwise)</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> Device must be restarted to apply rotation changes
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="brightness">Brightness (%)</label>
+                            <input type="range" class="form-control-range" id="brightness" min="0" max="100" 
+                                   value="{{ display.brightness if display else 100 }}" 
+                                   oninput="document.getElementById('brightness_value').textContent = this.value">
+                            <small class="text-muted">Current: <span id="brightness_value">{{ display.brightness if display else 100 }}</span>%</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="screen_on_time">Screen ON Time</label>
+                                    <input type="time" class="form-control" id="screen_on_time" 
+                                           value="{{ display.screen_on_time if display else '08:00' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="screen_off_time">Screen OFF Time</label>
+                                    <input type="time" class="form-control" id="screen_off_time" 
+                                           value="{{ display.screen_off_time if display else '22:00' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="screen_saver_enabled" 
+                                   {% if display and display.screen_saver_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="screen_saver_enabled">
+                                Enable Screen Saver
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="screen_saver_delay">Screen Saver Delay (seconds)</label>
+                            <input type="number" class="form-control" id="screen_saver_delay" 
+                                   value="{{ display.screen_saver_delay if display else 300 }}">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Display Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-volume-up"></i> Audio Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="audioForm">
+                        <div class="form-group">
+                            <label for="volume">Volume (%)</label>
+                            <input type="range" class="form-control-range" id="volume" min="0" max="100" 
+                                   value="{{ audio.volume if audio else 80 }}" 
+                                   oninput="document.getElementById('volume_value').textContent = this.value">
+                            <small class="text-muted">Current: <span id="volume_value">{{ audio.volume if audio else 80 }}</span>%</small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="muted" 
+                                   {% if audio and audio.muted %}checked{% endif %}>
+                            <label class="form-check-label" for="muted">
+                                Mute Audio
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="audio_output">Audio Output</label>
+                            <select class="form-control" id="audio_output">
+                                <option value="hdmi" {% if audio and audio.audio_output == 'hdmi' %}selected{% elif not audio %}selected{% endif %}>HDMI</option>
+                                <option value="analog" {% if audio and audio.audio_output == 'analog' %}selected{% endif %}>3.5mm Jack (Analog)</option>
+                                <option value="usb" {% if audio and audio.audio_output == 'usb' %}selected{% endif %}>USB Audio</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Audio Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mt-3">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-info btn-block mb-2" onclick="requestScreenshot()">
+                        <i class="fas fa-camera"></i> Request Screenshot
+                    </button>
+                    <button class="btn btn-secondary btn-block" onclick="viewScreenshots()">
+                        <i class="fas fa-images"></i> View Screenshots
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-network-wired"></i> Network Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="networkForm">
+                        <div class="form-group">
+                            <label for="connection_type">Connection Type</label>
+                            <select class="form-control" id="connection_type" onchange="toggleWifiSettings()">
+                                <option value="ethernet" {% if network and network.connection_type == 'ethernet' %}selected{% elif not network %}selected{% endif %}>Ethernet</option>
+                                <option value="wifi" {% if network and network.connection_type == 'wifi' %}selected{% endif %}>WiFi</option>
+                            </select>
+                        </div>
+
+                        <div id="wifiSettings" style="display: {% if network and network.connection_type == 'wifi' %}block{% else %}none{% endif %};">
+                            <div class="form-group">
+                                <label for="wifi_ssid">WiFi SSID</label>
+                                <input type="text" class="form-control" id="wifi_ssid" 
+                                       value="{{ network.wifi_ssid if network else '' }}"
+                                       placeholder="Network Name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi_password">WiFi Password</label>
+                                <input type="password" class="form-control" id="wifi_password" 
+                                       placeholder="Leave blank to keep existing">
+                                <small class="form-text text-muted">Password is encrypted and stored securely</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="wifi_security">Security Type</label>
+                                <select class="form-control" id="wifi_security">
+                                    <option value="WPA2" {% if network and network.wifi_security == 'WPA2' %}selected{% elif not network %}selected{% endif %}>WPA2</option>
+                                    <option value="WPA3" {% if network and network.wifi_security == 'WPA3' %}selected{% endif %}>WPA3</option>
+                                    <option value="WEP" {% if network and network.wifi_security == 'WEP' %}selected{% endif %}>WEP (Not Recommended)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="use_dhcp" 
+                                   {% if network and network.use_dhcp %}checked{% elif not network %}checked{% endif %}
+                                   onchange="toggleStaticIp()">
+                            <label class="form-check-label" for="use_dhcp">
+                                Use DHCP (Automatic IP)
+                            </label>
+                        </div>
+
+                        <div id="staticIpSettings" style="display: {% if network and not network.use_dhcp %}block{% else %}none{% endif %};">
+                            <div class="form-group">
+                                <label for="static_ip">IP Address</label>
+                                <input type="text" class="form-control" id="static_ip" 
+                                       value="{{ network.static_ip if network else '' }}"
+                                       placeholder="192.168.1.100">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="static_gateway">Gateway</label>
+                                <input type="text" class="form-control" id="static_gateway" 
+                                       value="{{ network.static_gateway if network else '' }}"
+                                       placeholder="192.168.1.1">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="static_dns">DNS Server</label>
+                                <input type="text" class="form-control" id="static_dns" 
+                                       value="{{ network.static_dns if network else '' }}"
+                                       placeholder="8.8.8.8">
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> Incorrect network settings may cause the device to lose connectivity.
+                        </div>
+
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-save"></i> Save Network Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Information -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Device Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Device Name:</dt>
+                        <dd class="col-sm-8">{{ device.name }}</dd>
+
+                        <dt class="col-sm-4">Serial:</dt>
+                        <dd class="col-sm-8"><code>{{ device.serial }}</code></dd>
+
+                        <dt class="col-sm-4">IP Address:</dt>
+                        <dd class="col-sm-8">{{ device.ip_address or 'Unknown' }}</dd>
+
+                        <dt class="col-sm-4">Software Version:</dt>
+                        <dd class="col-sm-8">{{ device.software_version if device.software_version else '1.0.0' }}</dd>
+
+                        <dt class="col-sm-4">Last Seen:</dt>
+                        <dd class="col-sm-8">
+                            {% if device.last_seen %}
+                            {{ device.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                            Never
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            {% if device.is_active %}
+                            <span class="badge badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const deviceId = {{ device.id }};
+
+function toggleWifiSettings() {
+    const connectionType = document.getElementById('connection_type').value;
+    document.getElementById('wifiSettings').style.display = connectionType === 'wifi' ? 'block' : 'none';
+}
+
+function toggleStaticIp() {
+    const useDhcp = document.getElementById('use_dhcp').checked;
+    document.getElementById('staticIpSettings').style.display = useDhcp ? 'none' : 'block';
+}
+
+// Display Settings Form
+document.getElementById('displayForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const data = {
+        display: {
+            resolution_width: parseInt(document.getElementById('resolution_width').value),
+            resolution_height: parseInt(document.getElementById('resolution_height').value),
+            rotation: parseInt(document.getElementById('rotation').value),
+            brightness: parseInt(document.getElementById('brightness').value),
+            screen_on_time: document.getElementById('screen_on_time').value,
+            screen_off_time: document.getElementById('screen_off_time').value,
+            screen_saver_enabled: document.getElementById('screen_saver_enabled').checked,
+            screen_saver_delay: parseInt(document.getElementById('screen_saver_delay').value)
+        }
+    };
+    
+    await saveConfig(data, 'Display settings updated successfully!');
+});
+
+// Audio Settings Form
+document.getElementById('audioForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const data = {
+        audio: {
+            volume: parseInt(document.getElementById('volume').value),
+            muted: document.getElementById('muted').checked,
+            audio_output: document.getElementById('audio_output').value
+        }
+    };
+    
+    await saveConfig(data, 'Audio settings updated successfully!');
+});
+
+// Network Settings Form
+document.getElementById('networkForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const data = {
+        network: {
+            connection_type: document.getElementById('connection_type').value,
+            use_dhcp: document.getElementById('use_dhcp').checked
+        }
+    };
+    
+    // Add WiFi settings if WiFi is selected
+    if (data.network.connection_type === 'wifi') {
+        data.network.wifi_ssid = document.getElementById('wifi_ssid').value;
+        data.network.wifi_security = document.getElementById('wifi_security').value;
+        
+        const wifiPassword = document.getElementById('wifi_password').value;
+        if (wifiPassword) {
+            data.network.wifi_password = wifiPassword;
+        }
+    }
+    
+    // Add static IP settings if not using DHCP
+    if (!data.network.use_dhcp) {
+        data.network.static_ip = document.getElementById('static_ip').value;
+        data.network.static_gateway = document.getElementById('static_gateway').value;
+        data.network.static_dns = document.getElementById('static_dns').value;
+    }
+    
+    await saveConfig(data, 'Network settings updated successfully!');
+});
+
+async function saveConfig(data, successMessage) {
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch(`/api/devices/${deviceId}/config`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(successMessage);
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error saving configuration: ' + error.message);
+    }
+}
+
+async function requestScreenshot() {
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch(`/api/devices/${deviceId}/request-screenshot`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message + '\nScreenshot will be captured within 30 seconds.');
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error requesting screenshot: ' + error.message);
+    }
+}
+
+function viewScreenshots() {
+    window.location.href = `/devices/${deviceId}/screenshots`;
+}
+</script>
+{% endblock %}
+
