@@ -107,12 +107,12 @@ FFGSA_CMS is a production-ready content management system designed for managing 
 
 **One-line install:**
 ```bash
-curl -sL https://github.com/FFGhosts/FFGSA_CSM.git/main/install.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/install.sh | sudo bash
 ```
 
 **Or download and run:**
 ```bash
-wget https://github.com/FFGhosts/FFGSA_CSM.git/main/install.sh
+wget https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -212,8 +212,8 @@ sudo rm -rf /opt/ffgsa_csm
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/FFGhosts/FFGSA_CSM.git
-cd FFG_CSM
+git clone https://github.com/FFGhosts/FFGSA_CRM.git
+cd FFGSA_CRM
 ```
 
 2. **Create virtual environment**
@@ -251,8 +251,8 @@ Access the application at `http://localhost:5000`
 
 1. **Clone and configure**
 ```bash
-git clone https://github.com/FFGhosts/FFGSA_CSM.git
-cd FFG_CSM
+git clone https://github.com/FFGhosts/FFGSA_CRM.git
+cd FFGSA_CRM
 cp .env.example .env
 # Edit .env with secure passwords and keys
 ```
