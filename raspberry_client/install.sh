@@ -74,22 +74,26 @@ sudo apt-get update -qq
 echo "Installing required packages..."
 sudo apt-get install -y \
     python3 \
-    python3-pip \
+    python3-requests \
+    python3-pil \
     mpv \
     scrot \
     git \
-    curl
+    curl \
+    unclutter
 
 echo -e "${GREEN}âœ“ System dependencies installed${NC}"
 
 echo -e "\n${GREEN}Step 3: Installing Python Dependencies${NC}"
 echo "=================================================="
 
-# Install Python packages
-echo "Installing Python packages..."
-sudo pip3 install --quiet \
-    requests \
-    Pillow
+# Verify Python packages
+echo "Verifying Python packages..."
+python3 -c "import requests; import PIL" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Error: Required Python packages not installed${NC}"
+    exit 1
+fi
 
 echo -e "${GREEN}âœ“ Python dependencies installed${NC}"
 
@@ -229,13 +233,8 @@ xserver-command=X -s 0 -dpms
 EOF
 fi
 
-# Disable cursor
-if command -v unclutter &> /dev/null; then
-    echo "unclutter already installed"
-else
-    echo "Installing unclutter to hide mouse cursor..."
-    sudo apt-get install -y unclutter
-fi
+# Disable cursor (unclutter already installed in Step 2)
+echo "Cursor hiding enabled via unclutter"
 
 echo -e "${GREEN}âœ“ Raspberry Pi optimized for digital signage${NC}"
 
