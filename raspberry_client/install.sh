@@ -21,11 +21,11 @@ GITHUB_REPO="https://github.com/FFGhosts/FFGSA_CRM.git"
 GITHUB_RAW="https://raw.githubusercontent.com/FFGhosts/FFGSA_CRM/main/raspberry_client"
 
 echo -e "${BLUE}"
-echo "╔═══════════════════════════════════════════════════════════╗"
-echo "║                                                           ║"
-echo "║         PiCMS Player - One-Step Installation             ║"
-echo "║                                                           ║"
-echo "╚═══════════════════════════════════════════════════════════╝"
+echo "â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—"
+echo "â•‘                                                           â•‘"
+echo "â•‘         PiCMS Player - One-Step Installation             â•‘"
+echo "â•‘                                                           â•‘"
+echo "â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•"
 echo -e "${NC}"
 
 # Check if running as pi user
@@ -80,7 +80,7 @@ sudo apt-get install -y \
     git \
     curl
 
-echo -e "${GREEN}✓ System dependencies installed${NC}"
+echo -e "${GREEN}âœ“ System dependencies installed${NC}"
 
 echo -e "\n${GREEN}Step 3: Installing Python Dependencies${NC}"
 echo "=================================================="
@@ -91,7 +91,7 @@ sudo pip3 install --quiet \
     requests \
     Pillow
 
-echo -e "${GREEN}✓ Python dependencies installed${NC}"
+echo -e "${GREEN}âœ“ Python dependencies installed${NC}"
 
 echo -e "\n${GREEN}Step 4: Creating Installation Directory${NC}"
 echo "=================================================="
@@ -104,7 +104,7 @@ sudo chown -R pi:pi $INSTALL_DIR
 mkdir -p $INSTALL_DIR/videos
 mkdir -p $INSTALL_DIR/logs
 
-echo -e "${GREEN}✓ Directory structure created${NC}"
+echo -e "${GREEN}âœ“ Directory structure created${NC}"
 
 echo -e "\n${GREEN}Step 5: Downloading Player Software from GitHub${NC}"
 echo "=================================================="
@@ -112,7 +112,7 @@ echo "=================================================="
 # Download player files from GitHub
 echo "Downloading player.py..."
 if curl -f -s -L -o $INSTALL_DIR/player.py "$GITHUB_RAW/player.py"; then
-    echo -e "${GREEN}✓ Downloaded player.py${NC}"
+    echo -e "${GREEN}âœ“ Downloaded player.py${NC}"
     chmod +x $INSTALL_DIR/player.py
 else
     echo -e "${RED}Error: Could not download player.py from GitHub${NC}"
@@ -122,13 +122,13 @@ fi
 
 echo "Downloading install_service.sh..."
 if curl -f -s -L -o $INSTALL_DIR/install_service.sh "$GITHUB_RAW/install_service.sh"; then
-    echo -e "${GREEN}✓ Downloaded install_service.sh${NC}"
+    echo -e "${GREEN}âœ“ Downloaded install_service.sh${NC}"
     chmod +x $INSTALL_DIR/install_service.sh
 else
-    echo -e "${YELLOW}⚠ Could not download install_service.sh${NC}"
+    echo -e "${YELLOW}âš  Could not download install_service.sh${NC}"
 fi
 
-echo -e "${GREEN}✓ Player software downloaded from GitHub${NC}"
+echo -e "${GREEN}âœ“ Player software downloaded from GitHub${NC}"
 
 echo -e "\n${GREEN}Step 6: Creating Configuration${NC}"
 echo "=================================================="
@@ -144,7 +144,7 @@ cat > $INSTALL_DIR/config.json << EOF
 }
 EOF
 
-echo -e "${GREEN}✓ Configuration file created${NC}"
+echo -e "${GREEN}âœ“ Configuration file created${NC}"
 
 echo -e "\n${GREEN}Step 7: Registering Device with Server${NC}"
 echo "=================================================="
@@ -171,11 +171,11 @@ with open('$INSTALL_DIR/config.json', 'w') as f:
     json.dump(config, f, indent=2)
 PYTHON_EOF
     
-    echo -e "${GREEN}✓ Device registered successfully${NC}"
+    echo -e "${GREEN}âœ“ Device registered successfully${NC}"
     echo -e "   Device ID: ${BLUE}$DEVICE_ID${NC}"
     echo -e "   API Key: ${BLUE}${API_KEY:0:20}...${NC}"
 else
-    echo -e "${YELLOW}⚠ Could not auto-register device${NC}"
+    echo -e "${YELLOW}âš  Could not auto-register device${NC}"
     echo -e "${YELLOW}Please register manually via the web interface${NC}"
     echo -e "${YELLOW}Then update config.json with device_id and api_key${NC}"
 fi
@@ -206,7 +206,7 @@ EOF
 # Reload systemd
 sudo systemctl daemon-reload
 
-echo -e "${GREEN}✓ Systemd service created${NC}"
+echo -e "${GREEN}âœ“ Systemd service created${NC}"
 
 echo -e "\n${GREEN}Step 9: Configuring Auto-Start${NC}"
 echo "=================================================="
@@ -214,7 +214,7 @@ echo "=================================================="
 # Enable service to start on boot
 sudo systemctl enable ${SERVICE_NAME}.service
 
-echo -e "${GREEN}✓ Service enabled for auto-start${NC}"
+echo -e "${GREEN}âœ“ Service enabled for auto-start${NC}"
 
 echo -e "\n${GREEN}Step 10: Optimizing Raspberry Pi Settings${NC}"
 echo "=================================================="
@@ -237,7 +237,7 @@ else
     sudo apt-get install -y unclutter
 fi
 
-echo -e "${GREEN}✓ Raspberry Pi optimized for digital signage${NC}"
+echo -e "${GREEN}âœ“ Raspberry Pi optimized for digital signage${NC}"
 
 echo -e "\n${GREEN}Step 11: Starting Service${NC}"
 echo "=================================================="
@@ -250,18 +250,18 @@ sleep 2
 
 # Check service status
 if sudo systemctl is-active --quiet ${SERVICE_NAME}.service; then
-    echo -e "${GREEN}✓ Service started successfully${NC}"
+    echo -e "${GREEN}âœ“ Service started successfully${NC}"
 else
-    echo -e "${YELLOW}⚠ Service may have issues starting${NC}"
+    echo -e "${YELLOW}âš  Service may have issues starting${NC}"
     echo "Check logs: sudo journalctl -u ${SERVICE_NAME} -f"
 fi
 
 echo -e "\n${BLUE}"
-echo "╔═══════════════════════════════════════════════════════════╗"
-echo "║                                                           ║"
-echo "║              Installation Complete! ✓                     ║"
-echo "║                                                           ║"
-echo "╚═══════════════════════════════════════════════════════════╝"
+echo "â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—"
+echo "â•‘                                                           â•‘"
+echo "â•‘              Installation Complete! âœ“                     â•‘"
+echo "â•‘                                                           â•‘"
+echo "â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•"
 echo -e "${NC}"
 
 echo -e "\n${GREEN}Installation Summary:${NC}"
