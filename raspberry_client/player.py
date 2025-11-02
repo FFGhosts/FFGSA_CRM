@@ -380,18 +380,23 @@ class PiCMSPlayer:
                 '--no-osd-bar',
                 '--vo=gpu',  # GPU video output for Raspberry Pi
                 '--ao=alsa',  # ALSA audio output
-                '--hwdec=auto',  # Hardware decoding
-                '--quiet'
+                '--hwdec=auto'  # Hardware decoding
+                # Removed --quiet to see error output
             ] + playlist
+            
+            # Open log file for MPV stderr
+            mpv_log_path = self.install_dir / 'logs' / 'mpv_output.log'
+            mpv_log_file = open(mpv_log_path, 'a')
             
             self.player_process = subprocess.Popen(
                 mpv_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stdout=mpv_log_file,
+                stderr=subprocess.STDOUT  # Redirect stderr to stdout (log file)
             )
             
             logger.info('MPV player started')
             logger.info(f'MPV command: {" ".join(mpv_cmd)}')
+            logger.info(f'MPV output: {mpv_log_path}')
             self.current_video = os.path.basename(playlist[0])
             self.current_schedule = schedule  # Track which schedule is playing
         
@@ -721,10 +726,20 @@ class PiCMSPlayer:
                     if not self.is_playing():
                         # Log MPV error if it crashed
                         if self.player_process:
-                            stdout, stderr = self.player_process.communicate(timeout=1)
-                            if stderr:
-                                logger.error(f'MPV error output: {stderr.decode("utf-8", errors="ignore")}')
-                            self.player_process = None
+                            try:
+                                # Try to get return code and any buffered output
+                                returncode = self.player_process.poll()
+                                if returncode is not None:
+                                    logger.error(f'MPV exited with code: {returncode}')
+                                    # Try to read stderr if available
+                                    if self.player_process.stderr:
+                                        stderr_data = self.player_process.stderr.read()
+                                        if stderr_data:
+                                            logger.error(f'MPV stderr: {stderr_data.decode("utf-8", errors="ignore")}')
+                            except Exception as e:
+                                logger.error(f'Error reading MPV output: {e}')
+                            finally:
+                                self.player_process = None
                         
                         playlist = self.get_playlist(self.current_schedule)
                         if playlist:
