@@ -11,7 +11,7 @@ import time
 import logging
 import subprocess
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -404,7 +404,7 @@ class PiCMSPlayer:
             data = {
                 'current_video': self.current_video,
                 'status': 'playing' if self.is_playing() else 'idle',
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
             
             response = requests.post(
