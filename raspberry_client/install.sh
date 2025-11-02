@@ -248,13 +248,22 @@ sudo systemctl daemon-reload
 
 echo -e "${GREEN}âœ“ Systemd service created${NC}"
 
-echo -e "\n${GREEN}Step 9: Configuring Auto-Start${NC}"
+echo -e "\n${GREEN}Step 9: Configuring Permissions${NC}"
+echo "=================================================="
+
+# Add user to video, render, and audio groups for GPU/DRM access
+echo "Adding $USER to video, render, and audio groups..."
+sudo usermod -a -G video,render,audio $USER
+
+echo -e "${GREEN}âœ" User permissions configured${NC}"
+
+echo -e "\n${GREEN}Step 10: Configuring Auto-Start${NC}"
 echo "=================================================="
 
 # Enable service to start on boot
 sudo systemctl enable ${SERVICE_NAME}.service
 
-echo -e "${GREEN}âœ“ Service enabled for auto-start${NC}"
+echo -e "${GREEN}âœ" Service enabled for auto-start${NC}"
 
 echo -e "\n${GREEN}Step 10: Optimizing Raspberry Pi Settings${NC}"
 echo "=================================================="

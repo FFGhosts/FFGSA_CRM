@@ -9,15 +9,17 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi
-ExecStart=/usr/bin/python3 /home/pi/player.py
+Group=video
+SupplementaryGroups=render audio
+WorkingDirectory=/home/pi/picms
+ExecStart=/usr/bin/python3 /home/pi/picms/player.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# Environment variables (optional)
-# Environment="PYTHONUNBUFFERED=1"
+# GPU/DRM access for video playback
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
 
 [Install]
 WantedBy=multi-user.target
