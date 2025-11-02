@@ -156,9 +156,11 @@ class Device(db.Model):
     last_seen = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     current_video = db.Column(db.String(255), nullable=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('device_groups.id'), nullable=True)
     
     # Relationships
     assignments = db.relationship('Assignment', backref='device', lazy='dynamic', cascade='all, delete-orphan')
+    group = db.relationship('DeviceGroup', backref='devices', foreign_keys=[group_id])
     
     @staticmethod
     def generate_api_key():
