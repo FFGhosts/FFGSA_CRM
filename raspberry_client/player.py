@@ -16,10 +16,11 @@ from pathlib import Path
 
 import requests
 
-# Configuration
-CONFIG_FILE = '/home/pi/config.json'
-VIDEOS_DIR = '/home/pi/videos'
-LOG_FILE = '/home/pi/player.log'
+# Configuration - Auto-detect installation directory
+INSTALL_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(INSTALL_DIR, 'config.json')
+VIDEOS_DIR = os.path.join(INSTALL_DIR, 'videos')
+LOG_FILE = os.path.join(INSTALL_DIR, 'logs', 'player.log')
 HEARTBEAT_INTERVAL = 60  # seconds
 SYNC_INTERVAL = 300  # 5 minutes
 SCHEDULE_CHECK_INTERVAL = 60  # Check for schedule changes every minute (Phase 5)
