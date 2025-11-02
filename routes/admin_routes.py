@@ -1851,10 +1851,10 @@ def get_unread_notifications():
         'count': len(notifications_list),
         'notifications': [{
             'id': n.id,
-            'type': n.notification_type.value,
+            'type': n.notification_type.value if hasattr(n.notification_type, 'value') else str(n.notification_type),
             'title': n.title,
             'message': n.message,
-            'priority': n.priority.value,
+            'priority': n.priority.value if hasattr(n.priority, 'value') else str(n.priority),
             'icon': n.icon,
             'action_url': n.action_url,
             'created_at': n.created_at.isoformat(),
