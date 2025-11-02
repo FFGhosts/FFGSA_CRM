@@ -100,17 +100,17 @@ def edit(id):
         
         # Update tags
         tag_ids = request.form.getlist('tags')
-        playlist.tags.clear()
+        playlist.tags = []
         if tag_ids:
             tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
-            playlist.tags.extend(tags)
+            playlist.tags = tags
         
         # Update categories
         category_ids = request.form.getlist('categories')
-        playlist.categories.clear()
+        playlist.categories = []
         if category_ids:
             categories = Category.query.filter(Category.id.in_(category_ids)).all()
-            playlist.categories.extend(categories)
+            playlist.categories = categories
         
         db.session.commit()
         flash(f'Playlist "{playlist.name}" updated successfully!', 'success')
