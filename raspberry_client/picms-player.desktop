@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PiCMS Player
+Comment=PiCMS Video Player for Digital Signage
+Exec=/usr/bin/python3 /home/pi/picms/player.py
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true

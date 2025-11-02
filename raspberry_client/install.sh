@@ -249,29 +249,45 @@ StandardError=append:$INSTALL_DIR/logs/player.log
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd
-sudo systemctl daemon-reload
+# Stop and disable if running
+if systemctl is-active --quiet ${SERVICE_NAME}.service; then
+    sudo systemctl stop ${SERVICE_NAME}.service
+    echo -e "${YELLOW}Stopped existing systemd service${NC}"
+fi
 
-echo -e "${GREEN}âœ“ Systemd service created${NC}"
+echo -e "${GREEN}✓ Systemd service created${NC}"
+echo -e "${YELLOW}Note: Service will not auto-start. Use autostart method instead.${NC}"
 
-echo -e "\n${GREEN}Step 9: Configuring Permissions${NC}"
+echo -e "\n${GREEN}Step 9: Configuring Autostart${NC}"
+echo "=================================================="
+
+# Create autostart directory
+mkdir -p ~/.config/autostart
+
+# Create autostart desktop file
+cat > ~/.config/autostart/picms-player.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=PiCMS Player
+Comment=PiCMS Video Player for Digital Signage
+Exec=/usr/bin/python3 $INSTALL_DIR/player.py
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true
+EOF
+
+echo -e "${GREEN}✓ Autostart configured (will run on desktop login)${NC}"
+
+echo -e "\n${GREEN}Step 10: Configuring Permissions${NC}"
 echo "=================================================="
 
 # Add user to video, render, and audio groups for GPU/DRM access
 echo "Adding $USER to video, render, and audio groups..."
 sudo usermod -a -G video,render,audio $USER
 
-echo -e "${GREEN}âœ" User permissions configured${NC}"
+echo -e "${GREEN}✓ User permissions configured${NC}"
 
-echo -e "\n${GREEN}Step 10: Configuring Auto-Start${NC}"
-echo "=================================================="
-
-# Enable service to start on boot
-sudo systemctl enable ${SERVICE_NAME}.service
-
-echo -e "${GREEN}âœ" Service enabled for auto-start${NC}"
-
-echo -e "\n${GREEN}Step 10: Optimizing Raspberry Pi Settings${NC}"
+echo -e "\n${GREEN}Step 11: Optimizing Raspberry Pi Settings${NC}"
 echo "=================================================="
 
 # Disable screen blanking
@@ -287,24 +303,7 @@ fi
 # Disable cursor (unclutter already installed in Step 2)
 echo "Cursor hiding enabled via unclutter"
 
-echo -e "${GREEN}âœ“ Raspberry Pi optimized for digital signage${NC}"
-
-echo -e "\n${GREEN}Step 11: Starting Service${NC}"
-echo "=================================================="
-
-# Start the service
-sudo systemctl start ${SERVICE_NAME}.service
-
-# Wait a moment for service to start
-sleep 2
-
-# Check service status
-if sudo systemctl is-active --quiet ${SERVICE_NAME}.service; then
-    echo -e "${GREEN}âœ“ Service started successfully${NC}"
-else
-    echo -e "${YELLOW}âš  Service may have issues starting${NC}"
-    echo "Check logs: sudo journalctl -u ${SERVICE_NAME} -f"
-fi
+echo -e "${GREEN}✓ Raspberry Pi optimized for digital signage${NC}"
 
 echo -e "\n${BLUE}"
 echo "â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—"
@@ -326,19 +325,19 @@ echo -e "  Device Serial: ${BLUE}$DEVICE_SERIAL${NC}"
 echo -e "\n${GREEN}Useful Commands:${NC}"
 echo "=================================================="
 echo -e "  View logs:         ${BLUE}tail -f $INSTALL_DIR/logs/player.log${NC}"
-echo -e "  Service status:    ${BLUE}sudo systemctl status $SERVICE_NAME${NC}"
-echo -e "  Restart service:   ${BLUE}sudo systemctl restart $SERVICE_NAME${NC}"
-echo -e "  Stop service:      ${BLUE}sudo systemctl stop $SERVICE_NAME${NC}"
-echo -e "  View live logs:    ${BLUE}sudo journalctl -u $SERVICE_NAME -f${NC}"
+echo -e "  View MPV logs:     ${BLUE}tail -f $INSTALL_DIR/logs/mpv_output.log${NC}"
 echo -e "  Edit config:       ${BLUE}nano $INSTALL_DIR/config.json${NC}"
+echo -e "  Manual start:      ${BLUE}python3 $INSTALL_DIR/player.py${NC}"
 
 echo -e "\n${GREEN}Next Steps:${NC}"
 echo "=================================================="
-echo "1. Assign videos to this device via the web interface"
-echo "2. Device will automatically sync and start playback"
-echo "3. Monitor device status at: $SERVER_URL/devices"
+echo "1. Reboot or log out and back in for autostart to take effect"
+echo "2. Assign videos to this device via the web interface"
+echo "3. Player will automatically start on desktop login"
+echo "4. Monitor device status at: $SERVER_URL/devices"
 
-echo -e "\n${YELLOW}Note:${NC} Device will start playing assigned videos within 5 minutes"
+echo -e "\n${YELLOW}Important:${NC} Player runs on desktop login (not as system service)"
+echo -e "${YELLOW}Note:${NC} Ensure auto-login is enabled for unattended operation"
 echo -e "${YELLOW}Note:${NC} Screen rotation can be configured via: $SERVER_URL/devices/{id}/configure"
 
 echo -e "\n${GREEN}Installation completed successfully!${NC}\n"
