@@ -114,18 +114,26 @@ def register_device():
         device = Device.query.filter_by(serial=serial).first()
         
         if device:
-            # Update IP address and last_seen
+            # Re-registration: Generate new API key
+            api_key = Device.generate_api_key()
+            
+            # Update device with new credentials
+            device.name = name  # Update name in case it changed
             device.ip_address = ip_address
+            device.api_key_hash = Device.hash_api_key(api_key)
             device.last_seen = datetime.utcnow()
             db.session.commit()
             
             response_time = (time.time() - start_time) * 1000
             log_api_request(device.id, '/device/register', 'POST', 200, response_time)
             
+            current_app.logger.info(f'Device re-registered with new API key: {serial}')
+            
             return jsonify({
                 'device_id': device.id,
-                'message': 'Device already registered',
-                'note': 'Use existing API key'
+                'api_key': api_key,
+                'message': 'Device re-registered successfully',
+                'note': 'New API key generated'
             }), 200
         
         # Generate API key

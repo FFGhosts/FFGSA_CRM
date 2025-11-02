@@ -153,24 +153,22 @@ echo -e "${GREEN}âœ“ Configuration file created${NC}"
 echo -e "\n${GREEN}Step 7: Registering Device with Server${NC}"
 echo "=================================================="
 
-# Try to register device
+# Try to register device (automatically generates new API key if device exists)
 echo "Attempting to register device..."
 RESPONSE=$(curl -s -X POST "$SERVER_URL/api/device/register" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"$DEVICE_NAME\",\"serial\":\"$DEVICE_SERIAL\",\"ip_address\":\"$(hostname -I | awk '{print $1}')\"}")
 
-if echo "$RESPONSE" | grep -q "device_id"; then
-    # Extract device_id from response
+# Check if registration was successful
+if echo "$RESPONSE" | grep -q "device_id" && echo "$RESPONSE" | grep -q "api_key"; then
+    # Extract device_id and api_key from response
     DEVICE_ID=$(echo "$RESPONSE" | grep -o '"device_id":[0-9]*' | cut -d':' -f2)
+    API_KEY=$(echo "$RESPONSE" | grep -o '"api_key":"[^"]*' | cut -d'"' -f4)
     
-    # Check if API key is included (new registration) or not (existing device)
-    if echo "$RESPONSE" | grep -q "api_key"; then
-        # New registration - has API key
-        API_KEY=$(echo "$RESPONSE" | grep -o '"api_key":"[^"]*' | cut -d'"' -f4)
-        
-        if [ -n "$DEVICE_ID" ] && [ -n "$API_KEY" ]; then
-            # Update config.json with device_id and api_key
-            python3 << PYTHON_EOF
+    # Verify we got valid values
+    if [ -n "$DEVICE_ID" ] && [ -n "$API_KEY" ]; then
+        # Update config.json with device_id and api_key
+        python3 << PYTHON_EOF
 import json
 try:
     with open('$INSTALL_DIR/config.json', 'r') as f:
@@ -179,58 +177,39 @@ try:
     config['api_key'] = '$API_KEY'
     with open('$INSTALL_DIR/config.json', 'w') as f:
         json.dump(config, f, indent=2)
+    print("Configuration updated successfully")
 except Exception as e:
     print(f"Error: {e}")
     exit(1)
 PYTHON_EOF
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ Device registered successfully${NC}"
+            echo -e "   Device ID: ${BLUE}$DEVICE_ID${NC}"
+            echo -e "   API Key: ${BLUE}${API_KEY:0:20}...${NC}"
             
-            if [ $? -eq 0 ]; then
-                echo -e "${GREEN}✓ Device registered successfully${NC}"
-                echo -e "   Device ID: ${BLUE}$DEVICE_ID${NC}"
-                echo -e "   API Key: ${BLUE}${API_KEY:0:20}...${NC}"
-            else
-                echo -e "${RED}Error updating configuration${NC}"
-                exit 1
+            # Check if this was a re-registration
+            if echo "$RESPONSE" | grep -q "re-registered"; then
+                echo -e "   ${YELLOW}Note: New API key generated (previous key invalidated)${NC}"
             fi
         else
-            echo -e "${RED}Error: Invalid registration response${NC}"
+            echo -e "${RED}Error updating configuration file${NC}"
             exit 1
         fi
     else
-        # Device already registered - no API key in response
-        echo -e "${YELLOW}⚠ Device already registered (serial: $DEVICE_SERIAL)${NC}"
-        echo -e "${YELLOW}Response: $RESPONSE${NC}"
-        echo -e ""
-        echo -e "${YELLOW}To complete setup:${NC}"
-        echo -e "  1. Go to: ${BLUE}$SERVER_URL/devices${NC}"
-        echo -e "  2. Find device with serial: ${BLUE}$DEVICE_SERIAL${NC}"
-        echo -e "  3. Click 'Regenerate API Key' to get a new key"
-        echo -e "  4. Update ${BLUE}$INSTALL_DIR/config.json${NC} with:"
-        echo -e "     - device_id: ${BLUE}$DEVICE_ID${NC}"
-        echo -e "     - api_key: (from step 3)"
-        echo -e ""
-        
-        # Update config with device_id only
-        python3 << PYTHON_EOF
-import json
-try:
-    with open('$INSTALL_DIR/config.json', 'r') as f:
-        config = json.load(f)
-    config['device_id'] = $DEVICE_ID
-    with open('$INSTALL_DIR/config.json', 'w') as f:
-        json.dump(config, f, indent=2)
-except Exception as e:
-    print(f"Error: {e}")
-    exit(1)
-PYTHON_EOF
-        
-        echo -e "${YELLOW}Installation will continue, but device won't work until API key is added.${NC}"
+        echo -e "${RED}Error: Incomplete response from server${NC}"
+        echo -e "${RED}Response: $RESPONSE${NC}"
+        exit 1
     fi
 else
-    echo -e "${YELLOW}⚠ Could not auto-register device${NC}"
-    echo -e "${YELLOW}Server response: $RESPONSE${NC}"
-    echo -e "${YELLOW}Please register manually via the web interface${NC}"
-    echo -e "${YELLOW}Then update config.json with device_id and api_key${NC}"
+    echo -e "${RED}✗ Device registration failed${NC}"
+    echo -e "${RED}Server response: $RESPONSE${NC}"
+    echo -e ""
+    echo -e "${YELLOW}Please check:${NC}"
+    echo -e "  1. Server is running at: ${BLUE}$SERVER_URL${NC}"
+    echo -e "  2. Server is accessible from this device"
+    echo -e "  3. Check server logs for errors"
+    exit 1
 fi
 
 echo -e "\n${GREEN}Step 8: Creating Systemd Service${NC}"
