@@ -348,6 +348,24 @@ class PiCMSPlayer:
             logger.warning('No videos to play')
             return
         
+        # Verify all video files exist and have size
+        valid_videos = []
+        for video_path in playlist:
+            if os.path.exists(video_path):
+                file_size = os.path.getsize(video_path)
+                if file_size > 0:
+                    valid_videos.append(video_path)
+                    logger.info(f'Video file: {os.path.basename(video_path)} ({file_size} bytes)')
+                else:
+                    logger.error(f'Video file is empty: {video_path}')
+            else:
+                logger.error(f'Video file not found: {video_path}')
+        
+        if not valid_videos:
+            logger.error('No valid video files to play')
+            return
+        
+        playlist = valid_videos
         logger.info(f'Starting playback of {len(playlist)} video(s)')
         if schedule:
             logger.info(f"Playing from schedule: {schedule.get('name')}")
@@ -373,6 +391,7 @@ class PiCMSPlayer:
             )
             
             logger.info('MPV player started')
+            logger.info(f'MPV command: {" ".join(mpv_cmd)}')
             self.current_video = os.path.basename(playlist[0])
             self.current_schedule = schedule  # Track which schedule is playing
         
@@ -700,6 +719,13 @@ class PiCMSPlayer:
                     
                     # Check if player crashed (restart with current schedule if any)
                     if not self.is_playing():
+                        # Log MPV error if it crashed
+                        if self.player_process:
+                            stdout, stderr = self.player_process.communicate(timeout=1)
+                            if stderr:
+                                logger.error(f'MPV error output: {stderr.decode("utf-8", errors="ignore")}')
+                            self.player_process = None
+                        
                         playlist = self.get_playlist(self.current_schedule)
                         if playlist:
                             logger.warning('Player not running, restarting...')
