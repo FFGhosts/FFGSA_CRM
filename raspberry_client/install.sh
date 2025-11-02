@@ -42,25 +42,31 @@ fi
 echo -e "\n${GREEN}Step 1: Gathering Configuration${NC}"
 echo "=================================================="
 
-# Get server URL
-read -p "Enter PiCMS Server URL (e.g., http://192.168.1.100:5000): " SERVER_URL
+# Get server URL (from environment or prompt)
+if [ -z "$SERVER_URL" ]; then
+    read -p "Enter PiCMS Server URL (e.g., http://192.168.1.100:5000): " SERVER_URL
+fi
 if [ -z "$SERVER_URL" ]; then
     echo -e "${RED}Error: Server URL is required${NC}"
     exit 1
 fi
 
-# Get device name
+# Get device name (from environment or prompt)
 HOSTNAME=$(hostname)
-read -p "Enter Device Name [default: $HOSTNAME]: " DEVICE_NAME
+if [ -z "$DEVICE_NAME" ]; then
+    read -p "Enter Device Name [default: $HOSTNAME]: " DEVICE_NAME
+fi
 DEVICE_NAME=${DEVICE_NAME:-$HOSTNAME}
 
-# Get device serial
+# Get device serial (from environment or prompt)
 SERIAL=$(cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2)
 if [ -z "$SERIAL" ]; then
     # Fallback to MAC address
     SERIAL="RPI-$(cat /sys/class/net/eth0/address | tr -d ':')"
 fi
-read -p "Enter Device Serial [default: $SERIAL]: " DEVICE_SERIAL
+if [ -z "$DEVICE_SERIAL" ]; then
+    read -p "Enter Device Serial [default: $SERIAL]: " DEVICE_SERIAL
+fi
 DEVICE_SERIAL=${DEVICE_SERIAL:-$SERIAL}
 
 echo -e "\n${GREEN}Step 2: Installing System Dependencies${NC}"
