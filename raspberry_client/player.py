@@ -385,7 +385,7 @@ class PiCMSPlayer:
             ] + playlist
             
             # Open log file for MPV stderr
-            mpv_log_path = self.install_dir / 'logs' / 'mpv_output.log'
+            mpv_log_path = LOG_FILE.parent / 'mpv_output.log'
             mpv_log_file = open(mpv_log_path, 'a')
             
             self.player_process = subprocess.Popen(
