@@ -159,56 +159,66 @@ RESPONSE=$(curl -s -X POST "$SERVER_URL/api/device/register" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"$DEVICE_NAME\",\"serial\":\"$DEVICE_SERIAL\",\"ip_address\":\"$(hostname -I | awk '{print $1}')\"}")
 
-# Check if registration was successful
-if echo "$RESPONSE" | grep -q "device_id" && echo "$RESPONSE" | grep -q "api_key"; then
-    # Extract device_id and api_key from response
-    DEVICE_ID=$(echo "$RESPONSE" | grep -o '"device_id":[0-9]*' | cut -d':' -f2)
-    API_KEY=$(echo "$RESPONSE" | grep -o '"api_key":"[^"]*' | cut -d'"' -f4)
-    
-    # Verify we got valid values
-    if [ -n "$DEVICE_ID" ] && [ -n "$API_KEY" ]; then
-        # Update config.json with device_id and api_key
-        python3 << PYTHON_EOF
+# Parse JSON response and update config using Python
+RESULT=$(python3 << PYTHON_EOF
 import json
+import sys
+
 try:
+    # Parse server response
+    response = json.loads('''$RESPONSE''')
+    
+    # Check if we have the required fields
+    if 'device_id' not in response or 'api_key' not in response:
+        print("ERROR: Missing device_id or api_key in response")
+        print(f"Response: {response}")
+        sys.exit(1)
+    
+    device_id = response['device_id']
+    api_key = response['api_key']
+    message = response.get('message', 'Registered')
+    
+    # Update config.json
     with open('$INSTALL_DIR/config.json', 'r') as f:
         config = json.load(f)
-    config['device_id'] = $DEVICE_ID
-    config['api_key'] = '$API_KEY'
+    
+    config['device_id'] = device_id
+    config['api_key'] = api_key
+    
     with open('$INSTALL_DIR/config.json', 'w') as f:
         json.dump(config, f, indent=2)
-    print("Configuration updated successfully")
+    
+    # Output success info
+    print(f"SUCCESS|{device_id}|{api_key}|{message}")
+    
+except json.JSONDecodeError as e:
+    print(f"ERROR: Invalid JSON response")
+    print(f"Response: $RESPONSE")
+    sys.exit(1)
 except Exception as e:
-    print(f"Error: {e}")
-    exit(1)
+    print(f"ERROR: {e}")
+    sys.exit(1)
 PYTHON_EOF
-        
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}✓ Device registered successfully${NC}"
-            echo -e "   Device ID: ${BLUE}$DEVICE_ID${NC}"
-            echo -e "   API Key: ${BLUE}${API_KEY:0:20}...${NC}"
-            
-            # Check if this was a re-registration
-            if echo "$RESPONSE" | grep -q "re-registered"; then
-                echo -e "   ${YELLOW}Note: New API key generated (previous key invalidated)${NC}"
-            fi
-        else
-            echo -e "${RED}Error updating configuration file${NC}"
-            exit 1
-        fi
-    else
-        echo -e "${RED}Error: Incomplete response from server${NC}"
-        echo -e "${RED}Response: $RESPONSE${NC}"
-        exit 1
+)
+
+# Check Python script result
+if echo "$RESULT" | grep -q "^SUCCESS"; then
+    # Extract values from result
+    DEVICE_ID=$(echo "$RESULT" | cut -d'|' -f2)
+    API_KEY=$(echo "$RESULT" | cut -d'|' -f3)
+    MESSAGE=$(echo "$RESULT" | cut -d'|' -f4)
+    
+    echo -e "${GREEN}✓ Device registered successfully${NC}"
+    echo -e "   Device ID: ${BLUE}$DEVICE_ID${NC}"
+    echo -e "   API Key: ${BLUE}${API_KEY:0:20}...${NC}"
+    
+    # Check if this was a re-registration
+    if echo "$MESSAGE" | grep -q "re-registered"; then
+        echo -e "   ${YELLOW}Note: New API key generated (previous key invalidated)${NC}"
     fi
 else
     echo -e "${RED}✗ Device registration failed${NC}"
-    echo -e "${RED}Server response: $RESPONSE${NC}"
-    echo -e ""
-    echo -e "${YELLOW}Please check:${NC}"
-    echo -e "  1. Server is running at: ${BLUE}$SERVER_URL${NC}"
-    echo -e "  2. Server is accessible from this device"
-    echo -e "  3. Check server logs for errors"
+    echo "$RESULT" | grep "ERROR" | sed 's/ERROR: //'
     exit 1
 fi
 
