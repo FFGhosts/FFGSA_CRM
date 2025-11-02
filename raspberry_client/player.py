@@ -371,17 +371,21 @@ class PiCMSPlayer:
             logger.info(f"Playing from schedule: {schedule.get('name')}")
         
         try:
-            # mpv command with fullscreen, loop, and no OSD
-            # Try multiple video output options in order of preference
+            # mpv command optimized for Raspberry Pi
             mpv_cmd = [
                 'mpv',
                 '--fullscreen',
                 '--loop-playlist=inf',
                 '--no-osc',
                 '--no-osd-bar',
-                '--vo=gpu,drm,fbdev',  # Try GPU first, then DRM, then framebuffer fallback
+                '--vo=gpu',  # Use GPU acceleration
                 '--ao=alsa',  # ALSA audio output
-                '--hwdec=auto'  # Hardware decoding
+                '--hwdec=auto',  # Hardware decoding
+                '--profile=low-latency',  # Reduce buffering for smoother playback
+                '--cache=yes',
+                '--demuxer-max-bytes=50M',  # Limit buffer size
+                '--vd-lavc-threads=4',  # Use 4 threads for decoding
+                '--opengl-fbo-format=rgb8'  # Reduce GPU memory usage
                 # Removed --quiet to see error output
             ] + playlist
             
