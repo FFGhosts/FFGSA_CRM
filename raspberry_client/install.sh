@@ -285,6 +285,10 @@ echo "=================================================="
 echo "Adding $USER to video, render, and audio groups..."
 sudo usermod -a -G video,render,audio $USER
 
+# Fix ownership of installation directory
+echo "Setting ownership of installation directory..."
+sudo chown -R $USER:$USER $INSTALL_DIR
+
 echo -e "${GREEN}✓ User permissions configured${NC}"
 
 echo -e "\n${GREEN}Step 11: Optimizing Raspberry Pi Settings${NC}"
