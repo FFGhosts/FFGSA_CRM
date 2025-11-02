@@ -34,12 +34,19 @@ def require_api_key(f):
         
         # Find device with matching API key
         device = None
-        for d in Device.query.filter_by(is_active=True).all():
+        active_devices = Device.query.filter_by(is_active=True).all()
+        
+        current_app.logger.debug(f'API Key auth attempt - Found {len(active_devices)} active devices')
+        
+        for d in active_devices:
+            current_app.logger.debug(f'Checking device {d.id} ({d.name})')
             if d.verify_api_key(api_key):
                 device = d
+                current_app.logger.info(f'API key verified for device {d.id} ({d.name})')
                 break
         
         if not device:
+            current_app.logger.warning(f'Invalid API key attempt from {request.remote_addr}')
             log_api_request(None, request.path, request.method, 401)
             return jsonify({'error': 'Invalid API key'}), 401
         
