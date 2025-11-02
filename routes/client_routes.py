@@ -77,6 +77,22 @@ def device_configuration_page(device_id):
                          audio=audio)
 
 
+@client_bp.route('/devices/<int:device_id>/screenshots', methods=['GET'])
+@login_required
+def device_screenshots_page(device_id):
+    """Device screenshots viewing page"""
+    device = Device.query.get_or_404(device_id)
+    
+    # Get recent screenshots
+    screenshots = DeviceScreenshot.query.filter_by(device_id=device_id)\
+        .order_by(DeviceScreenshot.captured_at.desc())\
+        .limit(20).all()
+    
+    return render_template('device_screenshots.html',
+                         device=device,
+                         screenshots=screenshots)
+
+
 # ============================================================================
 # DEVICE CONFIGURATION MANAGEMENT
 # ============================================================================

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}{{ device.name }} - Screenshots{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-camera"></i> Device Screenshots</h2>
+                    <p class="text-muted">{{ device.name }} ({{ device.serial }})</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.devices') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Devices
+                    </a>
+                    <button class="btn btn-primary" onclick="requestScreenshot()">
+                        <i class="fas fa-camera"></i> Request Screenshot
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Status:</strong> 
+                            {% if device.is_online %}
+                                <span class="badge bg-success">Online</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Offline</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Last Seen:</strong> 
+                            {{ device.last_seen.strftime('%Y-%m-%d %H:%M:%S') if device.last_seen else 'Never' }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>IP Address:</strong> {{ device.ip_address or 'Unknown' }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Total Screenshots:</strong> {{ screenshots|length }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screenshots Grid -->
+    {% if screenshots %}
+    <div class="row">
+        {% for screenshot in screenshots %}
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="card">
+                <a href="{{ screenshot.file_path }}" target="_blank">
+                    <img src="{{ screenshot.file_path }}" class="card-img-top" alt="Screenshot" 
+                         style="max-height: 200px; object-fit: cover;">
+                </a>
+                <div class="card-body">
+                    <p class="mb-1"><small class="text-muted">
+                        <i class="fas fa-clock"></i> 
+                        {{ screenshot.captured_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </small></p>
+                    <p class="mb-1"><small class="text-muted">
+                        <i class="fas fa-ruler-combined"></i> 
+                        {% if screenshot.width and screenshot.height %}
+                            {{ screenshot.width }}x{{ screenshot.height }}
+                        {% else %}
+                            Unknown size
+                        {% endif %}
+                    </small></p>
+                    <p class="mb-0"><small class="text-muted">
+                        <i class="fas fa-file"></i> 
+                        {{ (screenshot.file_size / 1024)|round(1) }} KB
+                    </small></p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ screenshot.file_path }}" download class="btn btn-sm btn-primary">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                    <button class="btn btn-sm btn-danger" onclick="deleteScreenshot({{ screenshot.id }})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No screenshots available for this device.
+        <button class="btn btn-sm btn-primary ms-3" onclick="requestScreenshot()">
+            <i class="fas fa-camera"></i> Request First Screenshot
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function requestScreenshot() {
+    if (!confirm('Request a screenshot from {{ device.name }}?')) return;
+    
+    fetch('/api/devices/{{ device.id }}/request-screenshot', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Screenshot requested! The device will capture and upload a screenshot within the next minute.');
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to request screenshot');
+    });
+}
+
+function deleteScreenshot(screenshotId) {
+    if (!confirm('Delete this screenshot?')) return;
+    
+    fetch(`/api/devices/{{ device.id }}/screenshots/${screenshotId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Screenshot deleted');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to delete screenshot');
+    });
+}
+
+// Auto-refresh every 30 seconds if device is online
+{% if device.is_online %}
+setTimeout(function() {
+    location.reload();
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}
