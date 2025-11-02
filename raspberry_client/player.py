@@ -384,9 +384,7 @@ class PiCMSPlayer:
                 '--profile=low-latency',  # Reduce buffering for smoother playback
                 '--cache=yes',
                 '--demuxer-max-bytes=50M',  # Limit buffer size
-                '--vd-lavc-threads=4',  # Use 4 threads for decoding
-                '--opengl-fbo-format=rgb8'  # Reduce GPU memory usage
-                # Removed --quiet to see error output
+                '--vd-lavc-threads=4'  # Use 4 threads for decoding
             ] + playlist
             
             # Open log file for MPV stderr
