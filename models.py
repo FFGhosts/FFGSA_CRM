@@ -160,7 +160,7 @@ class Device(db.Model):
     
     # Relationships
     assignments = db.relationship('Assignment', backref='device', lazy='dynamic', cascade='all, delete-orphan')
-    group = db.relationship('DeviceGroup', backref='devices', foreign_keys=[group_id])
+    primary_group = db.relationship('DeviceGroup', foreign_keys=[group_id], backref='primary_devices')
     
     @staticmethod
     def generate_api_key():
