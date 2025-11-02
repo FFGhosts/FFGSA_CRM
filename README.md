@@ -198,7 +198,12 @@ sudo systemctl restart ffgsa-csm
 
 **Manual backup:**
 ```bash
+# Quick database-only backup (under 1 minute)
 sudo /opt/ffgsa_csm/backup.sh
+
+# Full backup from web interface: System → Backup & Restore
+# Note: Video backups can take 10-30+ minutes depending on file size
+# Tip: Use "Database Only" backup for quick daily backups
 ```
 
 **Uninstall:**

@@ -1580,10 +1580,14 @@ def create_backup():
         backup_manager = BackupManager()
         
         if backup_type == 'full':
-            result = backup_manager.create_full_backup(description)
+            skip_videos = request.form.get('skip_videos') == 'true'
+            result = backup_manager.create_full_backup(description, skip_videos=skip_videos)
             if result['success']:
-                log_activity('create_backup', 'backup', None, {'type': 'full', 'timestamp': result['timestamp']})
-                flash(f'Full backup created successfully!', 'success')
+                msg = 'Full backup created successfully!'
+                if result.get('skipped'):
+                    msg += f" (Skipped: {', '.join(result['skipped'])})"
+                log_activity('create_backup', 'backup', None, {'type': 'full', 'timestamp': result['timestamp'], 'skipped': result.get('skipped', [])})
+                flash(msg, 'success')
             else:
                 log_activity('create_backup_failed', 'backup', None, {'type': 'full', 'errors': result['errors']})
                 flash(f'Backup completed with errors: {", ".join(result["errors"])}', 'warning')

@@ -76,7 +76,7 @@ class BackupManager:
             raise BackupError(f"Database backup failed: {str(e)}")
     
     def _backup_sqlite(self, timestamp: str, description: Optional[str] = None) -> Dict[str, Any]:
-        """Backup SQLite database"""
+        """Backup SQLite database using SQLite's backup API for consistency"""
         db_uri = current_app.config['SQLALCHEMY_DATABASE_URI']
         source_db = db_uri.replace('sqlite:///', '')
         
@@ -90,8 +90,27 @@ class BackupManager:
         backup_name = f"database_{timestamp}.db"
         backup_path = os.path.join(self.backup_dir, 'database', backup_name)
         
-        # Copy database file
-        shutil.copy2(source_db, backup_path)
+        try:
+            # Use SQLite's backup API for consistent backup even during writes
+            source_conn = sqlite3.connect(source_db)
+            backup_conn = sqlite3.connect(backup_path)
+            
+            # Perform the backup
+            with backup_conn:
+                source_conn.backup(backup_conn)
+            
+            source_conn.close()
+            backup_conn.close()
+            
+            self.logger.info(f"SQLite backup completed: {backup_path}")
+            
+        except sqlite3.Error as e:
+            # Fallback to simple file copy if backup API fails
+            self.logger.warning(f"SQLite backup API failed, using file copy: {e}")
+            try:
+                shutil.copy2(source_db, backup_path)
+            except Exception as copy_error:
+                raise BackupError(f"Database backup failed: {copy_error}")
         
         # Calculate checksum
         checksum = self._calculate_checksum(backup_path)
@@ -292,22 +311,29 @@ class BackupManager:
         video_folder = current_app.config['UPLOAD_FOLDER']
         thumbnail_folder = current_app.config['THUMBNAIL_FOLDER']
         
-        backup_name = f"videos_{timestamp}.tar.gz"
+        # Use uncompressed tar for speed (videos are already compressed)
+        backup_name = f"videos_{timestamp}.tar"
         backup_path = os.path.join(self.backup_dir, 'videos', backup_name)
         
         try:
             self.logger.info(f"Starting video files backup: {timestamp}")
-            # Create tar.gz archive
-            with tarfile.open(backup_path, 'w:gz') as tar:
+            self.logger.info("Note: Using uncompressed tar for speed (videos are already compressed)")
+            
+            # Create uncompressed tar archive (much faster for video files)
+            with tarfile.open(backup_path, 'w') as tar:
                 # Add videos
                 if os.path.exists(video_folder):
                     self.logger.info(f"Archiving video folder: {video_folder}")
-                    tar.add(video_folder, arcname='videos')
+                    file_count = len([f for f in os.listdir(video_folder) if os.path.isfile(os.path.join(video_folder, f))])
+                    self.logger.info(f"Found {file_count} video files to backup")
+                    tar.add(video_folder, arcname='videos', recursive=True)
                 
                 # Add thumbnails
                 if os.path.exists(thumbnail_folder):
                     self.logger.info(f"Archiving thumbnail folder: {thumbnail_folder}")
-                    tar.add(thumbnail_folder, arcname='thumbnails')
+                    thumb_count = len([f for f in os.listdir(thumbnail_folder) if os.path.isfile(os.path.join(thumbnail_folder, f))])
+                    self.logger.info(f"Found {thumb_count} thumbnail files to backup")
+                    tar.add(thumbnail_folder, arcname='thumbnails', recursive=True)
             
             # Calculate checksum
             checksum = self._calculate_checksum(backup_path)
@@ -383,8 +409,8 @@ class BackupManager:
             if os.path.exists(thumbnail_folder):
                 shutil.copytree(thumbnail_folder, f"{current_backup_base}_thumbnails")
             
-            # Extract backup
-            with tarfile.open(backup_path, 'r:gz') as tar:
+            # Extract backup (auto-detect compression)
+            with tarfile.open(backup_path, 'r:*') as tar:
                 tar.extractall(path=os.path.dirname(video_folder))
             
             return True
@@ -447,12 +473,13 @@ class BackupManager:
     # FULL BACKUP (ALL COMPONENTS)
     # ========================================================================
     
-    def create_full_backup(self, description: str = "") -> Dict:
+    def create_full_backup(self, description: str = "", skip_videos: bool = False) -> Dict:
         """
         Create complete backup of database, videos, and configuration
         
         Args:
             description: Optional description
+            skip_videos: If True, skip video backup (faster, recommended)
             
         Returns:
             Dict with information about all backups
@@ -464,32 +491,43 @@ class BackupManager:
             'videos': None,
             'config': None,
             'success': True,
-            'errors': []
+            'errors': [],
+            'skipped': []
         }
         
-        self.logger.info(f"Starting full backup: {results['timestamp']}")
+        self.logger.info(f"Starting full backup: {results['timestamp']} (skip_videos={skip_videos})")
         
-        # Backup database
+        # Backup database (fast)
         try:
+            self.logger.info("Starting database backup...")
             results['database'] = self.backup_database(description)
+            self.logger.info("Database backup completed")
         except Exception as e:
             error_msg = f"Database backup failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             results['errors'].append(error_msg)
             results['success'] = False
         
-        # Backup videos
-        try:
-            results['videos'] = self.backup_videos(description)
-        except Exception as e:
-            error_msg = f"Video backup failed: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
-            results['errors'].append(error_msg)
-            results['success'] = False
+        # Backup videos (slow - can be skipped)
+        if skip_videos:
+            self.logger.info("Skipping video backup (skip_videos=True)")
+            results['skipped'].append('videos')
+        else:
+            try:
+                self.logger.info("Starting video backup (this may take several minutes)...")
+                results['videos'] = self.backup_videos(description)
+                self.logger.info("Video backup completed")
+            except Exception as e:
+                error_msg = f"Video backup failed: {str(e)}"
+                self.logger.error(error_msg, exc_info=True)
+                results['errors'].append(error_msg)
+                results['success'] = False
         
-        # Backup config
+        # Backup config (fast)
         try:
+            self.logger.info("Starting config backup...")
             results['config'] = self.backup_config(description)
+            self.logger.info("Config backup completed")
         except Exception as e:
             error_msg = f"Config backup failed: {str(e)}"
             self.logger.error(error_msg, exc_info=True)

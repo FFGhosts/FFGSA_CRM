@@ -816,7 +816,8 @@ def trigger_backup():
         backup_manager = BackupManager()
         
         if backup_type == 'full':
-            result = backup_manager.create_full_backup(description)
+            skip_videos = data.get('skip_videos', False)
+            result = backup_manager.create_full_backup(description, skip_videos=skip_videos)
             return jsonify({
                 'success': result['success'],
                 'timestamp': result['timestamp'],
@@ -825,7 +826,8 @@ def trigger_backup():
                     'videos': result.get('videos'),
                     'config': result.get('config')
                 },
-                'errors': result.get('errors', [])
+                'errors': result.get('errors', []),
+                'skipped': result.get('skipped', [])
             }), 200
         
         elif backup_type == 'database':

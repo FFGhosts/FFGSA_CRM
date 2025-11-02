@@ -212,21 +212,36 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="backup_type" class="form-label">Backup Type</label>
-                        <select class="form-select" id="backup_type" name="backup_type" required>
+                        <select class="form-select" id="backup_type" name="backup_type" required onchange="updateBackupWarning()">
+                            <option value="database">Database Only (Recommended - Fast)</option>
                             <option value="full">Full Backup (Database + Videos + Config)</option>
-                            <option value="database">Database Only</option>
                             <option value="videos">Videos Only</option>
                             <option value="config">Configuration Only</option>
                         </select>
+                        <small class="text-muted">Database backup is usually sufficient for most cases</small>
+                    </div>
+                    <div class="mb-3" id="skipVideosOption" style="display: none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="skip_videos" name="skip_videos" value="true" checked>
+                            <label class="form-check-label" for="skip_videos">
+                                <strong>Skip video files</strong> (Recommended - Makes full backup fast)
+                            </label>
+                            <small class="form-text text-muted d-block">Videos are large and take 10-30+ minutes to backup. Uncheck only if you need video backup.</small>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="description" class="form-label">Description (Optional)</label>
                         <textarea class="form-control" id="description" name="description" rows="3" 
                                   placeholder="e.g., Before major update, End of month backup, etc."></textarea>
                     </div>
-                    <div class="alert alert-warning">
+                    <div class="alert alert-warning" id="backupWarning">
                         <i class="bi bi-exclamation-triangle"></i>
-                        <strong>Note:</strong> Backup process may take several minutes depending on data size.
+                        <strong>Note:</strong> Database backup is fast (usually under 1 minute).
+                    </div>
+                    <div class="alert alert-danger d-none" id="videoBackupWarning">
+                        <i class="bi bi-hourglass-split"></i>
+                        <strong>Warning:</strong> Video backups can take 5-15 minutes depending on file size ({{ (stats.total_size / (1024*1024*1024))|round(2) if stats else 0 }} GB). 
+                        <br><small><strong>Alternative:</strong> Manually copy <code>static/videos</code> folder for faster backup, or use "Database Only" for quick saves.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -328,6 +343,57 @@
 
 {% block extra_js %}
 <script>
+// Update warning based on backup type
+function updateBackupWarning() {
+    const backupType = document.getElementById('backup_type').value;
+    const warningDiv = document.getElementById('backupWarning');
+    const videoWarningDiv = document.getElementById('videoBackupWarning');
+    const skipVideosOption = document.getElementById('skipVideosOption');
+    const skipVideosCheckbox = document.getElementById('skip_videos');
+    
+    // Show skip videos option only for full backup
+    if (backupType === 'full') {
+        skipVideosOption.style.display = 'block';
+        
+        // Update warning based on checkbox state
+        if (skipVideosCheckbox && skipVideosCheckbox.checked) {
+            warningDiv.classList.remove('d-none');
+            videoWarningDiv.classList.add('d-none');
+            warningDiv.innerHTML = '<i class="bi bi-info-circle"></i> <strong>Full backup (without videos):</strong> Fast (1-2 minutes). Backs up database and config only.';
+            warningDiv.className = 'alert alert-info';
+        } else {
+            warningDiv.classList.add('d-none');
+            videoWarningDiv.classList.remove('d-none');
+        }
+    } else {
+        skipVideosOption.style.display = 'none';
+        
+        if (backupType === 'videos') {
+            warningDiv.classList.add('d-none');
+            videoWarningDiv.classList.remove('d-none');
+        } else {
+            warningDiv.classList.remove('d-none');
+            videoWarningDiv.classList.add('d-none');
+            
+            if (backupType === 'database') {
+                warningDiv.innerHTML = '<i class="bi bi-info-circle"></i> <strong>Database backup:</strong> Fast (usually under 1 minute). Backs up all data except video files.';
+                warningDiv.className = 'alert alert-info';
+            } else if (backupType === 'config') {
+                warningDiv.innerHTML = '<i class="bi bi-info-circle"></i> <strong>Config backup:</strong> Very fast (few seconds). Backs up configuration files only.';
+                warningDiv.className = 'alert alert-info';
+            }
+        }
+    }
+}
+
+// Add listener to skip videos checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    const skipVideosCheckbox = document.getElementById('skip_videos');
+    if (skipVideosCheckbox) {
+        skipVideosCheckbox.addEventListener('change', updateBackupWarning);
+    }
+});
+
 // Backup Progress Tracking
 document.addEventListener('DOMContentLoaded', function() {
     const createBackupForm = document.querySelector('#createBackupModal form');
@@ -339,6 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             const backupType = formData.get('backup_type');
             const description = formData.get('description');
+            const skipVideos = formData.get('skip_videos') === 'true';
             const csrfToken = formData.get('csrf_token');
             
             // Hide modal and show progress
@@ -348,9 +415,12 @@ document.addEventListener('DOMContentLoaded', function() {
             showBackupProgress();
             
             // Start backup via AJAX
-            startBackup(backupType, description, csrfToken);
+            startBackup(backupType, description, csrfToken, skipVideos);
         });
     }
+    
+    // Initialize warning on page load
+    updateBackupWarning();
 });
 
 function showBackupProgress() {
@@ -400,23 +470,75 @@ function addError(errorMessage) {
     errorList.appendChild(errorItem);
 }
 
-function startBackup(backupType, description, csrfToken) {
+function startBackup(backupType, description, csrfToken, skipVideos) {
+    const startTime = Date.now();
     updateProgress(10, 'Starting backup process...');
+    
+    // Simulate progress for better UX
+    let progressSimulator;
+    let currentProgress = 10;
+    
+    if (backupType === 'database') {
+        // Fast progress for database
+        progressSimulator = setInterval(() => {
+            if (currentProgress < 80) {
+                currentProgress += 15;
+                updateProgress(currentProgress, 'Creating database backup...');
+            }
+        }, 200);
+    } else if (backupType === 'config') {
+        // Very fast for config
+        progressSimulator = setInterval(() => {
+            if (currentProgress < 85) {
+                currentProgress += 20;
+                updateProgress(currentProgress, 'Backing up configuration...');
+            }
+        }, 150);
+    } else if (backupType === 'full' && skipVideos) {
+        // Fast for full backup without videos
+        progressSimulator = setInterval(() => {
+            if (currentProgress < 80) {
+                currentProgress += 10;
+                updateProgress(currentProgress, 'Creating full backup (skipping videos)...');
+            }
+        }, 300);
+    } else {
+        // Slower for videos/full with videos
+        progressSimulator = setInterval(() => {
+            if (currentProgress < 70) {
+                currentProgress += 5;
+                updateProgress(currentProgress, 'Processing backup (this may take several minutes)...');
+            }
+        }, 1000);
+    }
     
     const data = {
         backup_type: backupType,
         description: description || ''
     };
     
+    if (backupType === 'full') {
+        data.skip_videos = skipVideos;
+    }
+    
+    // Set longer timeout for video backups
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), backupType === 'videos' ? 900000 : 60000); // 15 min for videos, 1 min for others
+    
     fetch('{{ url_for("api.trigger_backup") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        signal: controller.signal
     })
-    .then(response => response.json())
+    .then(response => {
+        clearTimeout(timeoutId);
+        return response.json();
+    })
     .then(result => {
+        clearInterval(progressSimulator);
         if (result.success || result.success === undefined) {
             // Full backup
             if (backupType === 'full') {
@@ -429,7 +551,10 @@ function startBackup(backupType, description, csrfToken) {
                     addError('Database backup failed');
                 }
                 
-                if (result.backups.videos) {
+                if (result.skipped && result.skipped.includes('videos')) {
+                    updateProgress(progress, `⊘ Video files skipped (as requested)`);
+                    progress += 30;
+                } else if (result.backups.videos) {
                     updateProgress(progress, `✓ Video files backup completed (${(result.backups.videos.size / (1024*1024)).toFixed(2)} MB)`);
                     progress += 30;
                 } else if (result.errors && result.errors.some(e => e.includes('Video'))) {
@@ -443,8 +568,15 @@ function startBackup(backupType, description, csrfToken) {
                     addError('Configuration backup failed');
                 }
                 
-                updateProgress(100, result.errors && result.errors.length > 0 ? 
-                    'Backup completed with errors' : 'Full backup completed successfully!');
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                let completionMsg = result.errors && result.errors.length > 0 ? 
+                    `Backup completed with errors in ${elapsed}s` : `Full backup completed successfully in ${elapsed}s!`;
+                
+                if (result.skipped && result.skipped.length > 0) {
+                    completionMsg += ` (Skipped: ${result.skipped.join(', ')})`;
+                }
+                
+                updateProgress(100, completionMsg);
                 
                 // Show errors if any
                 if (result.errors && result.errors.length > 0) {
@@ -453,11 +585,10 @@ function startBackup(backupType, description, csrfToken) {
             } 
             // Single backup type
             else {
-                updateProgress(50, `Processing ${backupType} backup...`);
-                
                 if (result.type) {
                     const size = (result.size / (1024*1024)).toFixed(2);
-                    updateProgress(100, `✓ ${capitalize(result.type)} backup completed (${size} MB)`);
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    updateProgress(100, `✓ ${capitalize(result.type)} backup completed in ${elapsed}s (${size} MB)`);
                 } else {
                     updateProgress(100, 'Backup completed successfully!');
                 }
@@ -466,7 +597,7 @@ function startBackup(backupType, description, csrfToken) {
             // Reload page after delay
             setTimeout(() => {
                 location.reload();
-            }, 3000);
+            }, 2000);
         } else {
             updateProgress(100, 'Backup failed!', true);
             addError(result.error || 'Unknown error occurred');
@@ -475,9 +606,19 @@ function startBackup(backupType, description, csrfToken) {
         }
     })
     .catch(error => {
+        clearInterval(progressSimulator);
+        clearTimeout(timeoutId);
         console.error('Backup error:', error);
         updateProgress(100, 'Backup failed!', true);
-        addError('Network error: ' + error.message);
+        
+        if (error.name === 'AbortError') {
+            addError('Backup timeout: Operation took too long. For video backups, consider manually copying the static/videos folder.');
+        } else if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+            addError('Connection error: Could not connect to server. The backup may still be running on the server - check the backup list after refreshing.');
+        } else {
+            addError('Error: ' + error.message);
+        }
+        
         document.getElementById('backupProgressBar').classList.remove('progress-bar-animated');
         document.getElementById('backupProgressBar').classList.add('bg-danger');
     });
