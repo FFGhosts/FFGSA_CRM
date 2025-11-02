@@ -4,7 +4,7 @@ Handles device configuration, monitoring, and emergency broadcasts
 """
 from flask import Blueprint, render_template, request, jsonify, current_app, send_file
 from flask_login import login_required, current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
 import os
 import json
@@ -157,7 +157,7 @@ def update_device_config(device_id):
                     db.session.add(config)
                 
                 config.config_value = str(value)
-                config.updated_at = datetime.utcnow()
+                config.updated_at = datetime.now(timezone.utc)
         
         # Update display settings
         if 'display' in data:
@@ -169,7 +169,7 @@ def update_device_config(device_id):
             for key, value in data['display'].items():
                 if hasattr(display, key):
                     setattr(display, key, value)
-            display.updated_at = datetime.utcnow()
+            display.updated_at = datetime.now(timezone.utc)
         
         # Update network config
         if 'network' in data:
@@ -186,7 +186,7 @@ def update_device_config(device_id):
             if 'wifi_password' in data['network'] and data['network']['wifi_password']:
                 network.wifi_password = data['network']['wifi_password']
             
-            network.updated_at = datetime.utcnow()
+            network.updated_at = datetime.now(timezone.utc)
         
         # Update audio settings
         if 'audio' in data:
@@ -198,7 +198,7 @@ def update_device_config(device_id):
             for key, value in data['audio'].items():
                 if hasattr(audio, key):
                     setattr(audio, key, value)
-            audio.updated_at = datetime.utcnow()
+            audio.updated_at = datetime.now(timezone.utc)
         
         db.session.commit()
         
@@ -249,7 +249,7 @@ def request_screenshot(device_id):
         db.session.add(config)
     
     config.config_value = 'true'
-    config.updated_at = datetime.utcnow()
+    config.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     
     return jsonify({'success': True, 'message': f'Screenshot requested from {device.name}'})
@@ -322,12 +322,12 @@ def upload_screenshot(device_id):
             file_size=file_size,
             width=width,
             height=height,
-            captured_at=datetime.utcnow()
+            captured_at=datetime.now(timezone.utc)
         )
         db.session.add(screenshot)
         
         # Update device last_screenshot_at
-        device.last_screenshot_at = datetime.utcnow()
+        device.last_screenshot_at = datetime.now(timezone.utc)
         
         # Clear screenshot request flag
         config = DeviceConfig.query.filter_by(
@@ -403,7 +403,7 @@ def create_emergency_broadcast():
         
         # Set end time if duration specified
         if broadcast.duration:
-            broadcast.end_time = datetime.utcnow() + timedelta(seconds=broadcast.duration)
+            broadcast.end_time = datetime.now(timezone.utc) + timedelta(seconds=broadcast.duration)
         
         db.session.add(broadcast)
         db.session.flush()  # Get broadcast ID
@@ -464,7 +464,7 @@ def cancel_emergency_broadcast(broadcast_id):
     broadcast = EmergencyBroadcast.query.get_or_404(broadcast_id)
     
     broadcast.status = 'cancelled'
-    broadcast.end_time = datetime.utcnow()
+    broadcast.end_time = datetime.now(timezone.utc)
     db.session.commit()
     
     current_app.logger.info(f"Emergency broadcast cancelled by {current_user.username}: {broadcast.title}")
@@ -478,7 +478,7 @@ def get_device_emergency_broadcasts(device_id):
     device = Device.query.get_or_404(device_id)
     
     # Get active broadcasts for this device
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     broadcasts = db.session.query(EmergencyBroadcast).join(
         EmergencyBroadcastDevice,
@@ -516,7 +516,7 @@ def acknowledge_emergency_broadcast(device_id, broadcast_id):
     ).first_or_404()
     
     bd.status = 'acknowledged'
-    bd.acknowledged_at = datetime.utcnow()
+    bd.acknowledged_at = datetime.now(timezone.utc)
     db.session.commit()
     
     return jsonify({'success': True})
@@ -657,7 +657,7 @@ def deploy_system_update(update_id):
                     device_id=device.id,
                     update_id=update_id,
                     status='pending',
-                    scheduled_at=datetime.utcnow()
+                    scheduled_at=datetime.now(timezone.utc)
                 )
                 db.session.add(device_update)
                 deployed_count += 1
