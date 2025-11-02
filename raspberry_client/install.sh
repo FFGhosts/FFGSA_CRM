@@ -159,19 +159,19 @@ RESPONSE=$(curl -s -X POST "$SERVER_URL/api/device/register" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"$DEVICE_NAME\",\"serial\":\"$DEVICE_SERIAL\",\"ip_address\":\"$(hostname -I | awk '{print $1}')\"}")
 
-# Parse JSON response and update config using Python
-RESULT=$(python3 << PYTHON_EOF
+# Parse JSON response and update config using Python (pass response via stdin to avoid escaping issues)
+RESULT=$(echo "$RESPONSE" | python3 -c "
 import json
 import sys
 
 try:
-    # Parse server response
-    response = json.loads('''$RESPONSE''')
+    # Read server response from stdin
+    response = json.load(sys.stdin)
     
     # Check if we have the required fields
     if 'device_id' not in response or 'api_key' not in response:
-        print("ERROR: Missing device_id or api_key in response")
-        print(f"Response: {response}")
+        print('ERROR: Missing device_id or api_key in response', file=sys.stderr)
+        print(f'Response: {response}', file=sys.stderr)
         sys.exit(1)
     
     device_id = response['device_id']
@@ -188,18 +188,16 @@ try:
     with open('$INSTALL_DIR/config.json', 'w') as f:
         json.dump(config, f, indent=2)
     
-    # Output success info
-    print(f"SUCCESS|{device_id}|{api_key}|{message}")
+    # Output success info (use | as delimiter)
+    print(f'SUCCESS|{device_id}|{api_key}|{message}')
     
 except json.JSONDecodeError as e:
-    print(f"ERROR: Invalid JSON response")
-    print(f"Response: $RESPONSE")
+    print('ERROR: Invalid JSON response', file=sys.stderr)
     sys.exit(1)
 except Exception as e:
-    print(f"ERROR: {e}")
+    print(f'ERROR: {e}', file=sys.stderr)
     sys.exit(1)
-PYTHON_EOF
-)
+")
 
 # Check Python script result
 if echo "$RESULT" | grep -q "^SUCCESS"; then
