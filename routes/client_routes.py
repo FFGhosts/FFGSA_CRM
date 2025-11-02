@@ -12,7 +12,8 @@ import json
 from models import (
     db, Device, DeviceConfig, DisplaySettings, NetworkConfig,
     AudioSettings, DeviceScreenshot, SystemUpdate, DeviceUpdate,
-    EmergencyBroadcast, EmergencyBroadcastDevice, Video, DeviceGroup
+    EmergencyBroadcast, EmergencyBroadcastDevice, Video, DeviceGroup,
+    NotificationType, NotificationPriority
 )
 from utils.permissions import operator_required
 from utils.notifications import NotificationService
@@ -225,7 +226,7 @@ def update_device_config(device_id):
             user_id=current_user.id,
             title='Device Configuration Updated',
             message=f'Configuration for {device.name} has been updated',
-            notification_type='success',
+            notification_type=NotificationType.SUCCESS,
             category='device_config',
             related_entity_type='device',
             related_entity_id=device.id
@@ -453,9 +454,9 @@ def create_emergency_broadcast():
             user_id=current_user.id,
             title='Emergency Broadcast Created',
             message=f'"{broadcast.title}" broadcast to {len(devices)} devices',
-            notification_type='warning',
+            notification_type=NotificationType.WARNING,
             category='emergency_broadcast',
-            priority='high',
+            priority=NotificationPriority.HIGH,
             related_entity_type='emergency_broadcast',
             related_entity_id=broadcast.id
         )
@@ -625,7 +626,7 @@ def create_system_update():
             user_id=current_user.id,
             title='System Update Created',
             message=f'Version {update.version} is now available',
-            notification_type='info',
+            notification_type=NotificationType.INFO,
             category='system_update',
             related_entity_type='system_update',
             related_entity_id=update.id
@@ -687,9 +688,9 @@ def deploy_system_update(update_id):
             user_id=current_user.id,
             title='Update Deployed',
             message=f'Update {update.version} deployed to {deployed_count} device(s)',
-            notification_type='success',
+            notification_type=NotificationType.SUCCESS,
             category='system_update',
-            priority='high'
+            priority=NotificationPriority.HIGH
         )
         
         current_app.logger.info(f"Update {update.version} deployed to {deployed_count} devices by {current_user.username}")
