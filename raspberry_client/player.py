@@ -360,14 +360,16 @@ class PiCMSPlayer:
                 '--loop-playlist=inf',
                 '--no-osc',
                 '--no-osd-bar',
-                '--quiet',
-                '--really-quiet'
+                '--vo=gpu',  # GPU video output for Raspberry Pi
+                '--ao=alsa',  # ALSA audio output
+                '--hwdec=auto',  # Hardware decoding
+                '--quiet'
             ] + playlist
             
             self.player_process = subprocess.Popen(
                 mpv_cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
             )
             
             logger.info('MPV player started')
