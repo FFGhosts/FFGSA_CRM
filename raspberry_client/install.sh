@@ -164,22 +164,39 @@ if echo "$RESPONSE" | grep -q "device_id"; then
     DEVICE_ID=$(echo "$RESPONSE" | grep -o '"device_id":[0-9]*' | cut -d':' -f2)
     API_KEY=$(echo "$RESPONSE" | grep -o '"api_key":"[^"]*' | cut -d'"' -f4)
     
-    # Update config.json with device_id and api_key
-    python3 << PYTHON_EOF
+    # Verify we got valid values
+    if [ -z "$DEVICE_ID" ] || [ -z "$API_KEY" ]; then
+        echo -e "${YELLOW}Warning: Incomplete registration response${NC}"
+        echo -e "${YELLOW}Response: $RESPONSE${NC}"
+        echo -e "${YELLOW}Please register manually via web interface${NC}"
+    else
+        # Update config.json with device_id and api_key
+        python3 << PYTHON_EOF
 import json
-with open('$INSTALL_DIR/config.json', 'r') as f:
-    config = json.load(f)
-config['device_id'] = $DEVICE_ID
-config['api_key'] = '$API_KEY'
-with open('$INSTALL_DIR/config.json', 'w') as f:
-    json.dump(config, f, indent=2)
+try:
+    with open('$INSTALL_DIR/config.json', 'r') as f:
+        config = json.load(f)
+    config['device_id'] = $DEVICE_ID
+    config['api_key'] = '$API_KEY'
+    with open('$INSTALL_DIR/config.json', 'w') as f:
+        json.dump(config, f, indent=2)
+except Exception as e:
+    print(f"Error: {e}")
+    exit(1)
 PYTHON_EOF
-    
-    echo -e "${GREEN}âœ“ Device registered successfully${NC}"
-    echo -e "   Device ID: ${BLUE}$DEVICE_ID${NC}"
-    echo -e "   API Key: ${BLUE}${API_KEY:0:20}...${NC}"
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}Device registered successfully${NC}"
+            echo -e "   Device ID: ${BLUE}$DEVICE_ID${NC}"
+            echo -e "   API Key: ${BLUE}${API_KEY:0:20}...${NC}"
+        else
+            echo -e "${RED}Error updating configuration${NC}"
+            exit 1
+        fi
+    fi
 else
-    echo -e "${YELLOW}âš  Could not auto-register device${NC}"
+    echo -e "${YELLOW}⚠ Could not auto-register device${NC}"
+    echo -e "${YELLOW}Server response: $RESPONSE${NC}"
     echo -e "${YELLOW}Please register manually via the web interface${NC}"
     echo -e "${YELLOW}Then update config.json with device_id and api_key${NC}"
 fi
