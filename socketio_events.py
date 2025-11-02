@@ -203,58 +203,64 @@ def broadcast_device_status(device_id, status_data):
         device_id: Device ID
         status_data: Dictionary with device status information
     """
-    socketio.emit('device_status_changed', {
-        'device_id': device_id,
-        'data': status_data
-    }, room='devices', namespace='/')
+    if socketio is not None:
+        socketio.emit('device_status_changed', {
+            'device_id': device_id,
+            'data': status_data
+        }, room='devices', namespace='/')
 
 
 def broadcast_device_online(device_id, device_name):
     """Broadcast when device comes online"""
-    socketio.emit('device_online', {
-        'device_id': device_id,
-        'device_name': device_name,
-        'timestamp': str(__import__('datetime').datetime.utcnow())
-    }, room='devices', namespace='/')
+    if socketio is not None:
+        socketio.emit('device_online', {
+            'device_id': device_id,
+            'device_name': device_name,
+            'timestamp': str(__import__('datetime').datetime.utcnow())
+        }, room='devices', namespace='/')
 
 
 def broadcast_device_offline(device_id, device_name):
     """Broadcast when device goes offline"""
-    socketio.emit('device_offline', {
-        'device_id': device_id,
-        'device_name': device_name,
-        'timestamp': str(__import__('datetime').datetime.utcnow())
-    }, room='devices', namespace='/')
+    if socketio is not None:
+        socketio.emit('device_offline', {
+            'device_id': device_id,
+            'device_name': device_name,
+            'timestamp': str(__import__('datetime').datetime.utcnow())
+        }, room='devices', namespace='/')
 
 
 def broadcast_playback_started(device_id, device_name, video_title):
     """Broadcast when device starts playing a video"""
-    socketio.emit('playback_started', {
-        'device_id': device_id,
-        'device_name': device_name,
-        'video_title': video_title,
-        'timestamp': str(__import__('datetime').datetime.utcnow())
-    }, room='monitoring', namespace='/')
+    if socketio is not None:
+        socketio.emit('playback_started', {
+            'device_id': device_id,
+            'device_name': device_name,
+            'video_title': video_title,
+            'timestamp': str(__import__('datetime').datetime.utcnow())
+        }, room='monitoring', namespace='/')
 
 
 def broadcast_playback_stopped(device_id, device_name):
     """Broadcast when device stops playback"""
-    socketio.emit('playback_stopped', {
-        'device_id': device_id,
-        'device_name': device_name,
-        'timestamp': str(__import__('datetime').datetime.utcnow())
-    }, room='monitoring', namespace='/')
+    if socketio is not None:
+        socketio.emit('playback_stopped', {
+            'device_id': device_id,
+            'device_name': device_name,
+            'timestamp': str(__import__('datetime').datetime.utcnow())
+        }, room='monitoring', namespace='/')
 
 
 def broadcast_command_completed(device_id, device_name, command_type, status):
     """Broadcast when a remote command completes"""
-    socketio.emit('command_completed', {
-        'device_id': device_id,
-        'device_name': device_name,
-        'command_type': command_type,
-        'status': status,
-        'timestamp': str(__import__('datetime').datetime.utcnow())
-    }, room='devices', namespace='/')
+    if socketio is not None:
+        socketio.emit('command_completed', {
+            'device_id': device_id,
+            'device_name': device_name,
+            'command_type': command_type,
+            'status': status,
+            'timestamp': str(__import__('datetime').datetime.utcnow())
+        }, room='devices', namespace='/')
 
 
 def broadcast_stats_update(stats):
