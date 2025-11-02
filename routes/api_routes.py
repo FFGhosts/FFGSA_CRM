@@ -5,7 +5,7 @@ REST API endpoints for Raspberry Pi devices to sync videos and report status
 import os
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from flask import Blueprint, request, jsonify, send_from_directory, current_app
 from sqlalchemy.exc import IntegrityError
@@ -375,13 +375,37 @@ def download_video(filename):
             log_api_request(device.id, f'/video/{filename}', 'GET', 404)
             return jsonify({'error': 'Video not found'}), 404
         
-        # Check if device has this video assigned
-        assignment = Assignment.query.filter_by(
+        # Check if device has this video assigned (direct or via playlist)
+        has_access = False
+        
+        # Check direct video assignment
+        direct_assignment = Assignment.query.filter_by(
             device_id=device.id,
             video_id=video.id
         ).first()
         
-        if not assignment:
+        if direct_assignment:
+            has_access = True
+        else:
+            # Check playlist assignments
+            from models import Playlist, PlaylistItem
+            playlist_assignments = Assignment.query.filter(
+                Assignment.device_id == device.id,
+                Assignment.playlist_id.isnot(None)
+            ).all()
+            
+            for assignment in playlist_assignments:
+                # Check if video is in this playlist
+                playlist_item = PlaylistItem.query.filter_by(
+                    playlist_id=assignment.playlist_id,
+                    video_id=video.id
+                ).first()
+                
+                if playlist_item:
+                    has_access = True
+                    break
+        
+        if not has_access:
             log_api_request(device.id, f'/video/{filename}', 'GET', 403)
             return jsonify({'error': 'Video not assigned to this device'}), 403
         
@@ -432,7 +456,7 @@ def device_heartbeat():
         
         # Update device status
         was_online = device.is_online
-        device.last_seen = datetime.utcnow()
+        device.last_seen = datetime.now(timezone.utc)
         current_video = data.get('current_video')
         previous_video = device.current_video
         device.current_video = current_video
@@ -469,7 +493,7 @@ def device_heartbeat():
                 ).first()
                 
                 if playback_log:
-                    playback_log.ended_at = datetime.utcnow()
+                    playback_log.ended_at = datetime.now(timezone.utc)
                     duration = (playback_log.ended_at - playback_log.started_at).total_seconds()
                     playback_log.duration_played = int(duration)
         
@@ -500,7 +524,7 @@ def device_heartbeat():
         
         return jsonify({
             'message': 'Heartbeat received',
-            'server_time': datetime.utcnow().isoformat()
+            'server_time': datetime.now(timezone.utc).isoformat()
         }), 200
     
     except Exception as e:
