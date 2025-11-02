@@ -166,10 +166,28 @@ def update_device_config(device_id):
                 display = DisplaySettings(device_id=device_id)
                 db.session.add(display)
             
+            # Check if rotation is changing
+            old_rotation = display.rotation if display else 0
+            new_rotation = data['display'].get('rotation')
+            rotation_changed = new_rotation is not None and old_rotation != new_rotation
+            
             for key, value in data['display'].items():
                 if hasattr(display, key):
                     setattr(display, key, value)
             display.updated_at = datetime.now(timezone.utc)
+            
+            # Send immediate rotation command if changed
+            if rotation_changed:
+                from models import DeviceCommand
+                rotate_cmd = DeviceCommand(
+                    device_id=device_id,
+                    command_type='rotate_screen',
+                    parameters={'rotation': new_rotation},
+                    issued_by=current_user.id,
+                    status='pending'
+                )
+                db.session.add(rotate_cmd)
+                current_app.logger.info(f'Rotation command sent to device {device.name}: {new_rotation}°')
         
         # Update network config
         if 'network' in data:

@@ -742,7 +742,7 @@ def acknowledge_command(command_id):
             return jsonify({'error': 'Command not found'}), 404
         
         command.status = 'acknowledged'
-        command.acknowledged_at = datetime.utcnow()
+        command.acknowledged_at = datetime.now(timezone.utc)
         db.session.commit()
         
         response_time = (time.time() - start_time) * 1000

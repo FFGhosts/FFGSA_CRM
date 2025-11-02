@@ -602,6 +602,111 @@ class PiCMSPlayer:
         except Exception as e:
             logger.error(f'Screenshot error: {e}')
     
+    def check_commands(self):
+        """Check for pending commands from server"""
+        if not self.api_key or not self.device_id:
+            return
+        
+        try:
+            response = requests.get(
+                f'{self.server_url}/api/device/commands',
+                headers=self.get_headers(),
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                commands = data.get('commands', [])
+                
+                for cmd in commands:
+                    self.execute_command(cmd)
+        
+        except Exception as e:
+            logger.debug(f'Command check error: {e}')
+    
+    def execute_command(self, cmd):
+        """Execute a command from server"""
+        cmd_id = cmd['id']
+        cmd_type = cmd['command_type']
+        params = cmd.get('parameters', {})
+        
+        logger.info(f'Executing command: {cmd_type}')
+        
+        try:
+            # Acknowledge command
+            requests.post(
+                f'{self.server_url}/api/device/commands/{cmd_id}/acknowledge',
+                headers=self.get_headers(),
+                timeout=5
+            )
+            
+            # Execute based on type
+            result = None
+            if cmd_type == 'rotate_screen':
+                rotation = params.get('rotation', 0)
+                result = self.rotate_screen(rotation)
+            elif cmd_type == 'restart':
+                logger.info('Restart command received - rebooting...')
+                subprocess.run(['sudo', 'reboot'], check=False)
+                result = 'Rebooting...'
+            elif cmd_type == 'update_software':
+                result = 'Software update not implemented'
+            else:
+                result = f'Unknown command: {cmd_type}'
+            
+            # Mark command as complete
+            requests.post(
+                f'{self.server_url}/api/device/commands/{cmd_id}/complete',
+                headers=self.get_headers(),
+                json={'status': 'completed', 'result': result},
+                timeout=5
+            )
+            
+        except Exception as e:
+            logger.error(f'Command execution error: {e}')
+            # Mark as failed
+            try:
+                requests.post(
+                    f'{self.server_url}/api/device/commands/{cmd_id}/complete',
+                    headers=self.get_headers(),
+                    json={'status': 'failed', 'result': str(e)},
+                    timeout=5
+                )
+            except:
+                pass
+    
+    def rotate_screen(self, rotation):
+        """Apply screen rotation"""
+        try:
+            # Get display name
+            result = subprocess.run(['xrandr', '--current'], 
+                                  capture_output=True, text=True, check=False)
+            if result.returncode == 0:
+                # Find connected display
+                for line in result.stdout.split('\n'):
+                    if ' connected' in line:
+                        display_name = line.split()[0]
+                        
+                        # Map rotation value to xrandr orientation
+                        orientation_map = {
+                            0: 'normal',
+                            90: 'right',
+                            180: 'inverted',
+                            270: 'left'
+                        }
+                        orientation = orientation_map.get(rotation, 'normal')
+                        
+                        # Apply rotation
+                        subprocess.run(['xrandr', '--output', display_name, 
+                                      '--rotate', orientation], check=False)
+                        logger.info(f'Screen rotated to {rotation}° ({orientation})')
+                        return f'Screen rotated to {rotation}°'
+            
+            return 'Failed to find display'
+        except Exception as e:
+            logger.error(f'Rotation error: {e}')
+            return f'Rotation failed: {e}'
+    
     def check_emergency_broadcasts(self):
         """Check for active emergency broadcasts (Phase 7)"""
         if not self.api_key or not self.device_id:
@@ -697,17 +802,23 @@ class PiCMSPlayer:
         last_schedule_check = 0
         last_config_check = 0
         last_emergency_check = 0
+        last_command_check = 0
         
         while True:
             try:
                 current_time = time.time()
                 
-                # PRIORITY 1: Check for emergency broadcasts (Phase 7)
+                # PRIORITY 1: Check for pending commands (Phase 7)
+                if current_time - last_command_check >= 10:  # Check every 10 seconds
+                    self.check_commands()
+                    last_command_check = current_time
+                
+                # PRIORITY 2: Check for emergency broadcasts (Phase 7)
                 if current_time - last_emergency_check >= EMERGENCY_CHECK_INTERVAL:
                     self.check_emergency_broadcasts()
                     last_emergency_check = current_time
                 
-                # PRIORITY 2: Check device configuration (Phase 7)
+                # PRIORITY 3: Check device configuration (Phase 7)
                 if current_time - last_config_check >= CONFIG_CHECK_INTERVAL:
                     self.check_device_config()
                     last_config_check = current_time
