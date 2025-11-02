@@ -372,13 +372,14 @@ class PiCMSPlayer:
         
         try:
             # mpv command with fullscreen, loop, and no OSD
+            # Try multiple video output options in order of preference
             mpv_cmd = [
                 'mpv',
                 '--fullscreen',
                 '--loop-playlist=inf',
                 '--no-osc',
                 '--no-osd-bar',
-                '--vo=gpu',  # GPU video output for Raspberry Pi
+                '--vo=gpu,drm,fbdev',  # Try GPU first, then DRM, then framebuffer fallback
                 '--ao=alsa',  # ALSA audio output
                 '--hwdec=auto'  # Hardware decoding
                 # Removed --quiet to see error output
