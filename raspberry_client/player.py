@@ -498,6 +498,34 @@ class PiCMSPlayer:
             if rotation != self.display_settings.get('rotation'):
                 logger.info(f'Display rotation updated to {rotation}°')
                 self.display_settings['rotation'] = rotation
+                
+                # Apply rotation using xrandr (requires X server)
+                try:
+                    # Get display name
+                    result = subprocess.run(['xrandr', '--current'], 
+                                          capture_output=True, text=True, check=False)
+                    if result.returncode == 0:
+                        # Find connected display
+                        for line in result.stdout.split('\n'):
+                            if ' connected' in line:
+                                display_name = line.split()[0]
+                                
+                                # Map rotation value to xrandr orientation
+                                orientation_map = {
+                                    0: 'normal',
+                                    90: 'right',
+                                    180: 'inverted',
+                                    270: 'left'
+                                }
+                                orientation = orientation_map.get(rotation, 'normal')
+                                
+                                # Apply rotation
+                                subprocess.run(['xrandr', '--output', display_name, 
+                                              '--rotate', orientation], check=False)
+                                logger.info(f'Applied xrandr rotation: {orientation}')
+                                break
+                except Exception as e:
+                    logger.warning(f'Failed to apply xrandr rotation: {e}')
             
             # Check screen on/off times
             screen_on = settings.get('screen_on_time', '08:00')
